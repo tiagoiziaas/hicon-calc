@@ -66,7 +66,7 @@ function ResultadoTotal({ id, r }: { id: IdCenario; r: ResultadoCenario }) {
       <Linha rotulo="Parcela recalculada" valor={moeda(r.parcelaNaTaxaReferencia)} />
       <Linha rotulo="Quitado na parcela" valor={`${r.quitacaoNaParcela}ª de ${r.totalParcelas}`} />
       <Linha rotulo="Parcelas pagas" valor={String(r.parcelasPagas)} />
-      <Linha rotulo="Cobradas a mais" valor={String(r.parcelasIndevidas)} />
+      <Linha rotulo="Parcelas restantes" valor={String(r.parcelasIndevidas)} />
       <Linha rotulo="Total do indébito" valor={moeda(r.indebito)} destaque />
       <Linha rotulo="Em dobro" valor={moeda(r.indebitoDobro)} destaque />
     </dl>
