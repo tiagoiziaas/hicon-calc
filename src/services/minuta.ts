@@ -73,7 +73,7 @@ function preencherDados(aba: Aba, d: DadosMinuta) {
   aba.formula("I30", "I28*I21", c.parcelasPagas * c.parcela);
   aba.cache("I34", percentualAcima(c.taxaPraticada, d.taxaMedia));
 
-  aba.formula("I39", `'${ABAS_TOTAL.indices}'!F44`, d.taxaMedia);
+  aba.formula("I39", `'${ABAS_TOTAL.indices}'!F${LINHA_MEDIA_INDICES}`, d.taxaMedia);
   aba.formula("I40", `${T}D50`, h.parcelaNaTaxaReferencia);
   aba.formula("I43", `${T}D41`, h.quitacaoNaParcela);
 
@@ -134,14 +134,18 @@ export function preencherTodos(aba: Aba, d: DadosMinuta, celulaTetoIn28: string,
 }
 
 const LINHA_INICIAL_INDICES = 7;
-const LINHAS_INDICES = 37; // linhas 7 a 43 no modelo
+/** Posicoes do ranking do Bacen mostradas na aba (o modelo trazia 37; o escritorio usa ate a 20a). */
+const POSICOES_INDICES = 20;
+const LINHA_MEDIA_MODELO = 44; // linha da taxa media no modelo original
+/** Linha da taxa media depois de remover as posicoes 21 em diante (logo abaixo da 20a). */
+export const LINHA_MEDIA_INDICES = LINHA_INICIAL_INDICES + POSICOES_INDICES;
 
 function preencherIndices(aba: Aba, d: DadosMinuta) {
   const b = d.bacen;
   data(aba, "D3", b.periodoInicio);
   data(aba, "G3", b.periodoFim);
   aba.texto("D4", b.modalidade);
-  for (let k = 0; k < LINHAS_INDICES; k++) {
+  for (let k = 0; k < POSICOES_INDICES; k++) {
     const linha = LINHA_INICIAL_INDICES + k;
     const inst = b.ranking[k];
     if (inst) {
@@ -154,7 +158,16 @@ function preencherIndices(aba: Aba, d: DadosMinuta) {
       for (const col of ["B", "C", "D", "F", "G"]) aba.limpar(`${col}${linha}`);
     }
   }
-  aba.numero("F44", d.taxaMedia);
+
+  // Remove as linhas das posicoes 21 em diante e sobe a linha da taxa media para
+  // logo abaixo da 20a posicao (mantendo o estilo e a mesclagem D:E dela).
+  const linhaMedia = aba.clonarLinha(LINHA_MEDIA_MODELO);
+  aba.removerLinhasAPartirDe(LINHA_MEDIA_INDICES);
+  aba.removerMesclagensAPartirDe(LINHA_MEDIA_INDICES);
+  aba.inserirLinha(linhaMedia, LINHA_MEDIA_INDICES);
+  aba.mesclar(`D${LINHA_MEDIA_INDICES}:E${LINHA_MEDIA_INDICES}`);
+  aba.numero(`F${LINHA_MEDIA_INDICES}`, d.taxaMedia);
+  aba.dimensao(`A1:J${LINHA_MEDIA_INDICES}`);
 }
 
 /** Quanto a taxa cobrada esta acima da taxa de referencia (formula das abas de percentual). */
