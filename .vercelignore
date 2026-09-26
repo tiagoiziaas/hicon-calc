@@ -1,0 +1,5 @@
+# Nunca enviar ao Vercel: planilhas/documentos originais com dados de clientes
+/*.xlsx
+/*.pdf
+node_modules
+dist
