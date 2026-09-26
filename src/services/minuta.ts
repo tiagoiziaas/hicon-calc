@@ -71,7 +71,7 @@ function preencherDados(aba: Aba, d: DadosMinuta) {
   aba.numero("I28", c.parcelasPagas);
   aba.formula("I29", `${T}$D$19`, c.quitacaoNaParcela);
   aba.formula("I30", "I28*I21", c.parcelasPagas * c.parcela);
-  aba.cache("I34", h.percentualAcima);
+  aba.cache("I34", percentualAcima(c.taxaPraticada, d.taxaMedia));
 
   aba.formula("I39", `'${ABAS_TOTAL.indices}'!F44`, d.taxaMedia);
   aba.formula("I40", `${T}D50`, h.parcelaNaTaxaReferencia);
@@ -157,13 +157,22 @@ function preencherIndices(aba: Aba, d: DadosMinuta) {
   aba.numero("F44", d.taxaMedia);
 }
 
-function preencherPercentual(aba: Aba, r: ResultadoCenario, referencia: number, cobrada: number | null) {
+/** Quanto a taxa cobrada esta acima da taxa de referencia (formula das abas de percentual). */
+export const percentualAcima = (cobrada: number, referencia: number) => (cobrada - referencia) / referencia;
+
+/**
+ * Abas de percentual: C3 = taxa de referencia, C4 = "Taxa Cobrada pelo Banco".
+ * A taxa cobrada e SEMPRE a Taxa de Juros Praticada da aba TODOS 6 CALCULOS (D6).
+ * Devolve o % acima (C5).
+ */
+function preencherPercentual(aba: Aba, referencia: number, praticada: number): number {
+  const pct = percentualAcima(praticada, referencia);
   aba.cache("C3", referencia);
-  if (cobrada == null) aba.cache("C4", r.taxaCobradaPercentual);
-  else aba.numero("C4", cobrada);
-  aba.cache("C5", r.percentualAcima);
-  aba.cache("C61", r.percentualAcima);
-  aba.cache("C62", 1 - r.percentualAcima);
+  aba.formula("C4", `${T}D6`, praticada);
+  aba.cache("C5", pct);
+  aba.cache("C61", pct);
+  aba.cache("C62", 1 - pct);
+  return pct;
 }
 
 type Celula = { formula: string; cache: number } | { valor: number } | { data: string };
@@ -253,25 +262,26 @@ export async function preencherMinutaTotal(modelo: ArrayBuffer | Uint8Array, d: 
   preencherTodos(pasta.aba(ABAS_TOTAL.todos), d, `${D}I49`, `${D}I39`);
   preencherIndices(pasta.aba(ABAS_TOTAL.indices), d);
 
-  preencherPercentual(pasta.aba(ABAS_TOTAL.percentualMedia), h, d.taxaMedia, h.taxaContratada);
-  preencherPercentual(pasta.aba(ABAS_TOTAL.percentualIn28), i, i.taxaReferencia, i.taxaPraticada);
-  preencherPercentual(pasta.aba(ABAS_TOTAL.percentualContrato), c, c.taxaContratada, null);
+  const praticada = c.taxaPraticada; // 'TODOS 6 CALCULOS'!D6
+  const pctMedia = preencherPercentual(pasta.aba(ABAS_TOTAL.percentualMedia), d.taxaMedia, praticada);
+  const pctIn28 = preencherPercentual(pasta.aba(ABAS_TOTAL.percentualIn28), i.taxaReferencia, praticada);
+  const pctContrato = preencherPercentual(pasta.aba(ABAS_TOTAL.percentualContrato), c.taxaContratada, praticada);
 
   // Graficos das abas de percentual: passam a usar as celulas da propria aba.
   await atualizarGraficosDaAba(pasta, ABAS_TOTAL.percentualMedia, {
     taxaReferencia: d.taxaMedia,
-    taxaCobrada: h.taxaContratada,
-    percentual: h.percentualAcima,
+    taxaCobrada: praticada,
+    percentual: pctMedia,
   });
   await atualizarGraficosDaAba(pasta, ABAS_TOTAL.percentualIn28, {
     taxaReferencia: i.taxaReferencia,
-    taxaCobrada: i.taxaPraticada,
-    percentual: i.percentualAcima,
+    taxaCobrada: praticada,
+    percentual: pctIn28,
   });
   await atualizarGraficosDaAba(pasta, ABAS_TOTAL.percentualContrato, {
     taxaReferencia: c.taxaContratada,
-    taxaCobrada: c.taxaPraticada,
-    percentual: c.percentualAcima,
+    taxaCobrada: praticada,
+    percentual: pctContrato,
   });
 
   // 1.1.1 -- Hiscon x taxa media do Bacen
@@ -279,7 +289,7 @@ export async function preencherMinutaTotal(modelo: ArrayBuffer | Uint8Array, d: 
     B4: { data: h.data },
     C4: { valor: h.taxaContratada },
     D4: { formula: `${D}I39`, cache: d.taxaMedia },
-    E4: { valor: h.taxaPraticada },
+    E4: { formula: `${T}D6`, cache: praticada },
     F4: { formula: `${T}D41`, cache: h.quitacaoNaParcela },
     B6: { data: h.primeiraParcela },
     C6: { formula: `${T}D48`, cache: h.totalParcelas },
@@ -295,7 +305,7 @@ export async function preencherMinutaTotal(modelo: ArrayBuffer | Uint8Array, d: 
     B4: { data: i.data },
     C4: { valor: i.taxaContratada },
     D4: { formula: `${D}I49`, cache: i.taxaReferencia },
-    E4: { valor: i.taxaPraticada },
+    E4: { formula: `${T}D6`, cache: praticada },
     F4: { formula: `${T}D26`, cache: i.quitacaoNaParcela },
     B6: { data: i.primeiraParcela },
     C6: { formula: `${T}D33`, cache: i.totalParcelas },

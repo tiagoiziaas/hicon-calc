@@ -13,7 +13,7 @@
 import { resumoParcial, type ResultadoCenario, type ResumoParcial } from "./calculoCenarios";
 import { serialExcel } from "./financeiro";
 import { atualizarGraficosDaAba } from "./graficos";
-import { data, preencherTodos, type DadosMinuta } from "./minuta";
+import { data, percentualAcima, preencherTodos, type DadosMinuta } from "./minuta";
 import { Pasta, type Aba } from "./xlsx";
 
 export const ABAS_PARCIAL = {
@@ -100,13 +100,20 @@ function preencherTaxaMedia(aba: Aba, d: DadosMinuta) {
   aba.numero("E46", d.taxaMedia);
 }
 
-function preencherIndice(aba: Aba, referencia: number, praticada: number, percentual: number, formulaRef?: string) {
+/**
+ * Abas de indice: C3 = taxa de referencia, C4 = "Taxa Cobrada pelo Banco".
+ * A taxa cobrada e SEMPRE a Taxa de Juros Praticada da aba TODOS 6 CALCULOS (D6).
+ * Devolve o % acima (C5).
+ */
+function preencherIndice(aba: Aba, referencia: number, praticada: number, formulaRef?: string): number {
+  const pct = percentualAcima(praticada, referencia);
   if (formulaRef) aba.formula("C3", formulaRef, referencia);
   else aba.cache("C3", referencia);
-  aba.numero("C4", praticada);
-  aba.cache("C5", percentual);
-  aba.cache("C61", percentual);
-  aba.cache("C62", 1 - percentual);
+  aba.formula("C4", `${T}D6`, praticada);
+  aba.cache("C5", pct);
+  aba.cache("C61", pct);
+  aba.cache("C62", 1 - pct);
+  return pct;
 }
 
 type Celula = { formula: string; cache: number } | { valor: number } | { data: string };
@@ -221,12 +228,13 @@ function cabecalhoTodos(
   r: ResultadoCenario,
   celulaTaxaRef: string,
   todos: { nper: string; n: string; parcela: string; pmt: string },
+  praticada: number,
 ): Record<string, Celula> {
   return {
     B5: { data: r.data },
     C5: { valor: r.taxaContratada },
     D5: { formula: celulaTaxaRef, cache: r.taxaReferencia },
-    E5: { valor: r.taxaPraticada },
+    E5: { formula: `${T}D6`, cache: praticada },
     F5: { formula: `${T}${todos.nper}`, cache: r.quitacaoNaParcela },
     B7: { data: r.primeiraParcela },
     C7: { formula: `${T}${todos.n}`, cache: r.totalParcelas },
@@ -247,25 +255,26 @@ export async function preencherMinutaParcial(modelo: ArrayBuffer | Uint8Array, d
   preencherTaxaMedia(pasta.aba(ABAS_PARCIAL.taxaMedia), d);
   preencherTodos(pasta.aba(ABAS_PARCIAL.todos), d, `${D}I48`, `${D}I38`);
 
-  preencherIndice(pasta.aba(ABAS_PARCIAL.indiceMedia), d.taxaMedia, h.taxaPraticada, pc.hiscon.percentualAcima);
-  preencherIndice(pasta.aba(ABAS_PARCIAL.indiceIn28), i.taxaReferencia, i.taxaPraticada, pc.in28.percentualAcima, `${D}I48`);
-  preencherIndice(pasta.aba(ABAS_PARCIAL.indiceContrato), c.taxaContratada, c.taxaPraticada, pc.contrato.percentualAcima);
+  const praticada = c.taxaPraticada; // 'TODOS 6 CALCULOS'!D6
+  const pctMedia = preencherIndice(pasta.aba(ABAS_PARCIAL.indiceMedia), d.taxaMedia, praticada);
+  const pctIn28 = preencherIndice(pasta.aba(ABAS_PARCIAL.indiceIn28), i.taxaReferencia, praticada, `${D}I48`);
+  const pctContrato = preencherIndice(pasta.aba(ABAS_PARCIAL.indiceContrato), c.taxaContratada, praticada);
 
   // Graficos das abas de indice: passam a usar as celulas da propria aba.
   await atualizarGraficosDaAba(pasta, ABAS_PARCIAL.indiceMedia, {
     taxaReferencia: d.taxaMedia,
-    taxaCobrada: h.taxaPraticada,
-    percentual: pc.hiscon.percentualAcima,
+    taxaCobrada: praticada,
+    percentual: pctMedia,
   });
   await atualizarGraficosDaAba(pasta, ABAS_PARCIAL.indiceIn28, {
     taxaReferencia: i.taxaReferencia,
-    taxaCobrada: i.taxaPraticada,
-    percentual: pc.in28.percentualAcima,
+    taxaCobrada: praticada,
+    percentual: pctIn28,
   });
   await atualizarGraficosDaAba(pasta, ABAS_PARCIAL.indiceContrato, {
     taxaReferencia: c.taxaContratada,
-    taxaCobrada: c.taxaPraticada,
-    percentual: pc.contrato.percentualAcima,
+    taxaCobrada: praticada,
+    percentual: pctContrato,
   });
 
   // 1.1 -- Hiscon x taxa media do Bacen
@@ -273,7 +282,7 @@ export async function preencherMinutaParcial(modelo: ArrayBuffer | Uint8Array, d
     pasta.aba(ABAS_PARCIAL.quitacaoMedia),
     pc.hiscon,
     contrato,
-    cabecalhoTodos(h, `${D}I38`, { nper: "D41", n: "D48", parcela: "D43", pmt: "D50" }),
+    cabecalhoTodos(h, `${D}I38`, { nper: "D41", n: "D48", parcela: "D43", pmt: "D50" }, praticada),
     LINHAS.media,
   );
 
@@ -282,7 +291,7 @@ export async function preencherMinutaParcial(modelo: ArrayBuffer | Uint8Array, d
     pasta.aba(ABAS_PARCIAL.quitacaoIn28),
     pc.in28,
     contrato,
-    cabecalhoTodos(i, `${D}I48`, { nper: "D26", n: "D33", parcela: "D28", pmt: "D35" }),
+    cabecalhoTodos(i, `${D}I48`, { nper: "D26", n: "D33", parcela: "D28", pmt: "D35" }, praticada),
     LINHAS.in28,
   );
 

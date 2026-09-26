@@ -99,9 +99,9 @@ export function calcularCenario(
   const taxaPraticada = rate(n, parcela, valor);
   const parcelaNaTaxaReferencia = pmt(taxaReferencia, n, valor);
 
-  // Taxa "cobrada" comparada nas abas de PERCENTUAL: a 1.1.1 usa a taxa contratada;
-  // a 2.2.2 e a 3.3.3 usam a taxa praticada (RATE).
-  const taxaCobradaPercentual = id === "hiscon" ? taxaContratada! : taxaPraticada;
+  // Taxa "cobrada pelo banco" nas abas de PERCENTUAL: sempre a taxa praticada (RATE),
+  // a mesma da aba TODOS 6 CALCULOS (D6).
+  const taxaCobradaPercentual = taxaPraticada;
   const referenciaPercentual = id === "contrato" ? taxaContratada! : taxaReferencia;
 
   return {

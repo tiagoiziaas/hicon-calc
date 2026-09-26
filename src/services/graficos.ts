@@ -18,6 +18,23 @@ const NS_C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const NS_XDR = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
 
+/** Tamanhos de fonte dos graficos, em centesimos de ponto (1600 = 16 pt). */
+const FONTE = {
+  titulo: 1600,
+  eixo: 1200,
+  legenda: 1200,
+  valorBarra: 1400,
+  centroRosca: 2000,
+};
+
+/** Aplica o tamanho de fonte em todos os trechos de texto dentro de um elemento. */
+function tamanhoFonte(elemento: Element | undefined, sz: number) {
+  if (!elemento) return;
+  for (const nome of ["defRPr", "rPr", "endParaRPr"]) {
+    for (const e of Array.from(elemento.getElementsByTagNameNS(NS_A, nome))) e.setAttribute("sz", String(sz));
+  }
+}
+
 export interface ValoresGrafico {
   /** Taxa de referencia (media, IN 28 ou contratual), decimal -- celula C3. */
   taxaReferencia: number;
@@ -105,6 +122,8 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   const layoutArea = area && filhoC(area, "layout");
   if (layoutArea) while (layoutArea.firstChild) layoutArea.removeChild(layoutArea.firstChild);
   const legenda = doc.getElementsByTagNameNS(NS_C, "legend")[0];
+  tamanhoFonte(eixo, FONTE.eixo);
+  tamanhoFonte(legenda, FONTE.legenda);
   if (legenda) {
     filhoC(legenda, "legendPos")?.setAttribute("val", "b");
     const layoutLegenda = filhoC(legenda, "layout");
@@ -129,7 +148,7 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   const a = (nome: string) => doc.createElementNS(NS_A, `a:${nome}`);
   const pPr = a("pPr");
   const defRPr = a("defRPr");
-  defRPr.setAttribute("sz", "1100");
+  defRPr.setAttribute("sz", String(FONTE.valorBarra));
   defRPr.setAttribute("b", "1");
   pPr.appendChild(defRPr);
   const paragrafo = a("p");
@@ -183,6 +202,8 @@ export async function atualizarGraficosDaAba(pasta: Pasta, nomeAba: string, v: V
     const barras = doc.getElementsByTagNameNS(NS_C, "barChart")[0];
     const rosca = doc.getElementsByTagNameNS(NS_C, "doughnutChart")[0] ?? doc.getElementsByTagNameNS(NS_C, "pieChart")[0];
 
+    tamanhoFonte(doc.getElementsByTagNameNS(NS_C, "title")[0], FONTE.titulo);
+
     if (barras) {
       // Serie 1 = linha 3 (referencia), serie 2 = linha 4 (cobrada).
       filhosC(barras, "ser").forEach((ser, i) => {
@@ -202,7 +223,11 @@ export async function atualizarGraficosDaAba(pasta: Pasta, nomeAba: string, v: V
       }
       // Caixa de texto no meio da rosca: ja vinculada a celula; so atualiza o texto salvo.
       for (const formas of await pasta.relacionadas(caminho, "/chartUserShapes")) {
-        trocarTextoVinculado((await pasta.parte(formas)).documentElement, pctTexto(v.percentual));
+        const centro = (await pasta.parte(formas)).documentElement;
+        trocarTextoVinculado(centro, pctTexto(v.percentual));
+        tamanhoFonte(centro, FONTE.centroRosca);
+        // Caixa estreita: sem quebra de linha o "28,76%" nao vira "28,76" + "%".
+        for (const corpo of Array.from(centro.getElementsByTagNameNS(NS_A, "bodyPr"))) corpo.setAttribute("wrap", "none");
       }
     }
   }
