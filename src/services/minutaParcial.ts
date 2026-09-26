@@ -12,6 +12,7 @@
 
 import { resumoParcial, type ResultadoCenario, type ResumoParcial } from "./calculoCenarios";
 import { serialExcel } from "./financeiro";
+import { atualizarGraficosDaAba } from "./graficos";
 import { data, preencherTodos, type DadosMinuta } from "./minuta";
 import { Pasta, type Aba } from "./xlsx";
 
@@ -249,6 +250,23 @@ export async function preencherMinutaParcial(modelo: ArrayBuffer | Uint8Array, d
   preencherIndice(pasta.aba(ABAS_PARCIAL.indiceMedia), d.taxaMedia, h.taxaPraticada, pc.hiscon.percentualAcima);
   preencherIndice(pasta.aba(ABAS_PARCIAL.indiceIn28), i.taxaReferencia, i.taxaPraticada, pc.in28.percentualAcima, `${D}I48`);
   preencherIndice(pasta.aba(ABAS_PARCIAL.indiceContrato), c.taxaContratada, c.taxaPraticada, pc.contrato.percentualAcima);
+
+  // Graficos das abas de indice: passam a usar as celulas da propria aba.
+  await atualizarGraficosDaAba(pasta, ABAS_PARCIAL.indiceMedia, {
+    taxaReferencia: d.taxaMedia,
+    taxaCobrada: h.taxaPraticada,
+    percentual: pc.hiscon.percentualAcima,
+  });
+  await atualizarGraficosDaAba(pasta, ABAS_PARCIAL.indiceIn28, {
+    taxaReferencia: i.taxaReferencia,
+    taxaCobrada: i.taxaPraticada,
+    percentual: pc.in28.percentualAcima,
+  });
+  await atualizarGraficosDaAba(pasta, ABAS_PARCIAL.indiceContrato, {
+    taxaReferencia: c.taxaContratada,
+    taxaCobrada: c.taxaPraticada,
+    percentual: pc.contrato.percentualAcima,
+  });
 
   // 1.1 -- Hiscon x taxa media do Bacen
   preencherQuitacao(

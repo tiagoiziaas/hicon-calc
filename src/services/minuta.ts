@@ -11,6 +11,7 @@
 import type { ResultadoTop5 } from "./bacen";
 import type { ResultadoCenario } from "./calculoCenarios";
 import { serialExcel } from "./financeiro";
+import { atualizarGraficosDaAba } from "./graficos";
 import { Pasta, type Aba } from "./xlsx";
 import type { Identificacao } from "../types/cenarios";
 
@@ -255,6 +256,23 @@ export async function preencherMinutaTotal(modelo: ArrayBuffer | Uint8Array, d: 
   preencherPercentual(pasta.aba(ABAS_TOTAL.percentualMedia), h, d.taxaMedia, h.taxaContratada);
   preencherPercentual(pasta.aba(ABAS_TOTAL.percentualIn28), i, i.taxaReferencia, i.taxaPraticada);
   preencherPercentual(pasta.aba(ABAS_TOTAL.percentualContrato), c, c.taxaContratada, null);
+
+  // Graficos das abas de percentual: passam a usar as celulas da propria aba.
+  await atualizarGraficosDaAba(pasta, ABAS_TOTAL.percentualMedia, {
+    taxaReferencia: d.taxaMedia,
+    taxaCobrada: h.taxaContratada,
+    percentual: h.percentualAcima,
+  });
+  await atualizarGraficosDaAba(pasta, ABAS_TOTAL.percentualIn28, {
+    taxaReferencia: i.taxaReferencia,
+    taxaCobrada: i.taxaPraticada,
+    percentual: i.percentualAcima,
+  });
+  await atualizarGraficosDaAba(pasta, ABAS_TOTAL.percentualContrato, {
+    taxaReferencia: c.taxaContratada,
+    taxaCobrada: c.taxaPraticada,
+    percentual: c.percentualAcima,
+  });
 
   // 1.1.1 -- Hiscon x taxa media do Bacen
   preencherQuitacao(pasta.aba(ABAS_TOTAL.quitacaoMedia), h, contrato, {

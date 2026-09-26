@@ -202,10 +202,74 @@ export class Aba {
   }
 }
 
+/** Resolve o Target de um .rels relativo a pasta da parte dona ("xl/worksheets" + "../drawings/x.xml"). */
+function resolverCaminho(pastaBase: string, alvo: string): string {
+  if (alvo.startsWith("/")) return alvo.slice(1);
+  const partes = pastaBase.split("/");
+  for (const p of alvo.split("/")) {
+    if (p === "..") partes.pop();
+    else if (p !== ".") partes.push(p);
+  }
+  return partes.join("/");
+}
+
 export class Pasta {
   private readonly abas = new Map<string, { caminho: string; aba: Aba }>();
+  /** Outras partes XML abertas para edicao (graficos, desenhos...), gravadas no gerar(). */
+  private readonly partes = new Map<string, Document>();
 
   private constructor(private readonly zip: JSZip) {}
+
+  /** Abre (uma vez) uma parte XML qualquer do pacote para edicao. */
+  async parte(caminho: string): Promise<Document> {
+    let doc = this.partes.get(caminho);
+    if (!doc) {
+      const f = this.zip.file(caminho);
+      if (!f) throw new Error(`O arquivo não tem a parte ${caminho}`);
+      doc = parse(await f.async("string"));
+      this.partes.set(caminho, doc);
+    }
+    return doc;
+  }
+
+  /** Partes ligadas a uma parte pelo seu .rels, filtradas pelo final do tipo da relacao (ex.: "/chart"). */
+  async relacionadas(caminho: string, tipo: string): Promise<string[]> {
+    const i = caminho.lastIndexOf("/");
+    const base = caminho.slice(0, i);
+    const rels = this.zip.file(`${base}/_rels/${caminho.slice(i + 1)}.rels`);
+    if (!rels) return [];
+    return elementos(parse(await rels.async("string")).documentElement)
+      .filter((r) => r.getAttribute("Type")?.endsWith(tipo) && r.getAttribute("TargetMode") !== "External")
+      .map((r) => resolverCaminho(base, r.getAttribute("Target")!));
+  }
+
+  /** Camadas de desenho de uma aba (onde ficam graficos, caixas de texto e formas). */
+  async desenhosDaAba(nome: string): Promise<string[]> {
+    const item = this.abas.get(nome);
+    if (!item) throw new Error(`A planilha modelo não tem a aba "${nome}"`);
+    return this.relacionadas(item.caminho, "/drawing");
+  }
+
+  /** Graficos desenhados em uma aba (aba -> desenho -> graficos). */
+  async graficosDaAba(nome: string): Promise<string[]> {
+    const graficos: string[] = [];
+    for (const desenho of await this.desenhosDaAba(nome)) {
+      graficos.push(...(await this.relacionadas(desenho, "/chart")));
+    }
+    return graficos;
+  }
+
+  /** Texto de uma celula (compartilhado ou em linha), como esta no modelo. */
+  async textoCelula(nomeAba: string, ref: string): Promise<string> {
+    const c = Array.from(this.aba(nomeAba).doc.getElementsByTagNameNS(NS, "c")).find((e) => e.getAttribute("r") === ref);
+    if (!c) return "";
+    if (c.getAttribute("t") === "s") {
+      const indice = Number(filho(c, "v")?.textContent ?? -1);
+      const si = (await this.parte("xl/sharedStrings.xml")).getElementsByTagNameNS(NS, "si")[indice];
+      return si ? Array.from(si.getElementsByTagNameNS(NS, "t")).map((t) => t.textContent).join("") : "";
+    }
+    return c.textContent ?? "";
+  }
 
   static async abrir(dados: ArrayBuffer | Uint8Array): Promise<Pasta> {
     const zip = await JSZip.loadAsync(dados);
@@ -233,6 +297,7 @@ export class Pasta {
   /** Gera o .xlsx: grava as abas, manda o Excel recalcular tudo ao abrir e descarta a cadeia de calculo antiga. */
   async gerar(): Promise<Uint8Array> {
     for (const { caminho, aba } of this.abas.values()) this.zip.file(caminho, serializar(aba.doc));
+    for (const [caminho, doc] of this.partes) this.zip.file(caminho, serializar(doc));
 
     const workbook = parse(await this.zip.file("xl/workbook.xml")!.async("string"));
     let calcPr = workbook.getElementsByTagNameNS(NS, "calcPr")[0];
