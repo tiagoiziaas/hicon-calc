@@ -1,8 +1,18 @@
 import { useCenarios } from "../hooks/useCenarios";
-import { CENARIOS, camposPreenchidos, totalCampos, type IdCenario } from "../types/cenarios";
+import { CENARIOS, camposPreenchidos, totalCampos, type DadosCenario, type IdCenario } from "../types/cenarios";
 import { CampoData, CampoInteiro, CampoMoeda, CampoTaxa, CampoTexto } from "./Campos";
 import { GerarMinuta } from "./GerarMinuta";
 import { IconeBusca } from "./Icones";
+
+/** Campos preenchidos uma vez so e copiados para os 3 cenarios. */
+const CAMPOS_COMUNS = [
+  "data",
+  "banco",
+  "valorContratadoCentavos",
+  "valorParcelaCentavos",
+  "totalParcelas",
+  "dataPrimeiraParcela",
+] as const satisfies readonly (keyof DadosCenario)[];
 
 interface Props {
   /** Leva a data do cenario para a consulta do BACEN. */
@@ -10,18 +20,68 @@ interface Props {
 }
 
 export function FormCenarios({ onConsultarBacen }: Props) {
-  const { cenarios, identificacao, atualizar, atualizarIdentificacao, copiar, limpar, limparTodos } = useCenarios();
+  const { cenarios, identificacao, atualizar, atualizarTodos, atualizarIdentificacao, copiar, limpar, limparTodos } =
+    useCenarios();
+  // O bloco comum mostra os valores do contrato bancario (os 3 recebem o que for digitado nele).
+  const comum = cenarios.contrato;
+  const divergentes = (id: IdCenario) => CAMPOS_COMUNS.filter((k) => cenarios[id][k] !== comum[k]);
 
   return (
     <section className="cenarios">
       <div className="cenarios-topo">
         <p className="muted">
-          Preencha os dados de cada cenário. Tudo fica salvo neste navegador enquanto você digita.
+          Preencha os dados comuns uma vez só: eles vão automaticamente para os 3 cenários. Tudo fica salvo neste
+          navegador enquanto você digita.
         </p>
         <button className="btn-secundario" type="button" onClick={limparTodos}>
           Limpar tudo
         </button>
       </div>
+
+      <article className="card comuns">
+        <header className="comuns-head">
+          <h2>Dados comuns aos 3 cenários</h2>
+          <p className="muted">
+            Preenchidos aqui, vão para Contrato bancário, Extraídos do Hiscon e Instrução Normativa 28. Se um cenário
+            precisar de um valor diferente, ajuste direto no card dele.
+          </p>
+        </header>
+        <div className="comuns-campos">
+          <CampoData id="comum-data" rotulo="Data da contratação" valor={comum.data} onChange={(v) => atualizarTodos("data", v)} />
+          <CampoTexto
+            id="comum-banco"
+            rotulo="Nome do banco"
+            placeholder="Ex.: Banco Safra S.A."
+            valor={comum.banco}
+            onChange={(v) => atualizarTodos("banco", v)}
+          />
+          <CampoMoeda
+            id="comum-valor"
+            rotulo="Valor contratado"
+            valor={comum.valorContratadoCentavos}
+            onChange={(v) => atualizarTodos("valorContratadoCentavos", v)}
+          />
+          <CampoMoeda
+            id="comum-parcela"
+            rotulo="Valor da parcela contratada"
+            valor={comum.valorParcelaCentavos}
+            onChange={(v) => atualizarTodos("valorParcelaCentavos", v)}
+          />
+          <CampoInteiro
+            id="comum-parcelas"
+            rotulo="Total de parcelas"
+            sufixo="parcelas"
+            valor={comum.totalParcelas}
+            onChange={(v) => atualizarTodos("totalParcelas", v)}
+          />
+          <CampoData
+            id="comum-primeira"
+            rotulo="Data pgto da 1ª parcela"
+            valor={comum.dataPrimeiraParcela}
+            onChange={(v) => atualizarTodos("dataPrimeiraParcela", v)}
+          />
+        </div>
+      </article>
 
       <div className="cenarios-grid">
         {CENARIOS.map((def, idx) => {
@@ -30,6 +90,7 @@ export function FormCenarios({ onConsultarBacen }: Props) {
           const TOTAL_CAMPOS = totalCampos(def.id);
           const campo = (nome: string) => `${def.id}-${nome}`;
           const origemCopia: IdCenario | null = idx > 0 ? CENARIOS[idx - 1].id : null;
+          const diferentes = def.id === "contrato" ? [] : divergentes(def.id);
 
           return (
             <article key={def.id} className="card cenario">
@@ -40,6 +101,19 @@ export function FormCenarios({ onConsultarBacen }: Props) {
                   <p className="muted">{def.descricao}</p>
                 </div>
               </header>
+
+              {diferentes.length > 0 && (
+                <div className="aviso-diferente">
+                  <span>Diferente dos dados comuns</span>
+                  <button
+                    className="btn-link"
+                    type="button"
+                    onClick={() => diferentes.forEach((k) => atualizar(def.id, k, comum[k]))}
+                  >
+                    Usar dados comuns
+                  </button>
+                </div>
+              )}
 
               <div className="progresso" title={`${preenchidos} de ${TOTAL_CAMPOS} campos preenchidos`}>
                 <div className="barra">

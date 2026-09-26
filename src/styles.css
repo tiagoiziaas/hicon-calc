@@ -298,6 +298,15 @@ select option { background: var(--surface); color: var(--text); }
   margin-bottom: 16px;
 }
 .cenarios-topo p { margin: 0; font-size: 14px; }
+.comuns { margin-bottom: 18px; display: flex; flex-direction: column; gap: 16px; border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
+.comuns-head h2 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
+.comuns-head p { margin: 0; font-size: 13px; line-height: 1.5; }
+.comuns-campos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.aviso-diferente {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 6px 6px 12px; border-radius: 9px; font-size: 12px; font-weight: 600;
+  color: var(--primary); background: var(--surface-2); border: 1px dashed var(--primary);
+}
 .cenarios-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: start; }
 .cenario { display: flex; flex-direction: column; gap: 16px; padding: 20px; animation: surgir .35s ease both; }
 .cenario:nth-child(2) { animation-delay: 60ms; }
@@ -429,6 +438,7 @@ select option { background: var(--surface); color: var(--text); }
   .btn-primario { width: 100%; }
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .cenarios-grid { grid-template-columns: 1fr; }
+  .comuns-campos { grid-template-columns: 1fr 1fr; }
   .minuta-grid, .minuta-ident { grid-template-columns: 1fr; }
   .seletor-minuta { width: 100%; }
   .seletor-minuta button { flex: 1; }
@@ -439,6 +449,7 @@ select option { background: var(--surface); color: var(--text); }
   .abas { display: flex; }
   .abas button { flex: 1; padding: 10px 8px; }
   .cenarios-topo { flex-direction: column; align-items: stretch; }
+  .comuns-campos { grid-template-columns: 1fr; }
   .container { padding: 24px 16px 40px; }
   .filtros { grid-template-columns: 1fr; }
   .segmented { width: 100%; }

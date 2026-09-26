@@ -58,6 +58,15 @@ export function useCenarios() {
     setCenarios((atual) => ({ ...atual, [id]: { ...atual[id], [campo]: valor } }));
   }, []);
 
+  /** Grava o mesmo valor em um campo dos 3 cenarios (bloco "Dados comuns"). */
+  const atualizarTodos = useCallback(<K extends keyof DadosCenario>(campo: K, valor: DadosCenario[K]) => {
+    setCenarios((atual) => ({
+      contrato: { ...atual.contrato, [campo]: valor },
+      hiscon: { ...atual.hiscon, [campo]: valor },
+      in28: { ...atual.in28, [campo]: valor },
+    }));
+  }, []);
+
   const copiar = useCallback((de: IdCenario, para: IdCenario) => {
     // A taxa maxima da IN 28 e propria do cenario IN 28: nao e copiada nem sobrescrita.
     setCenarios((atual) => ({ ...atual, [para]: { ...atual[de], taxaTetoIn28: atual[para].taxaTetoIn28 } }));
@@ -76,5 +85,5 @@ export function useCenarios() {
     setIdentificacao((atual) => ({ ...atual, [campo]: valor }));
   }, []);
 
-  return { cenarios, identificacao, atualizar, atualizarIdentificacao, copiar, limpar, limparTodos };
+  return { cenarios, identificacao, atualizar, atualizarTodos, atualizarIdentificacao, copiar, limpar, limparTodos };
 }
