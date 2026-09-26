@@ -8,7 +8,8 @@
 // Nos modelos originais os graficos apontavam para OUTRAS planilhas ([1]Planilha1...)
 // ou para a aba 1.1.1 -- por isso nao mudavam. Aqui eles passam a apontar para as
 // celulas da propria aba e ja levam os valores calculados (o Excel continua
-// atualizando sozinho se alguem alterar as celulas).
+// atualizando sozinho se alguem alterar as celulas). O grafico de barras tambem e
+// reconfigurado: eixo a partir de 0%, legenda embaixo e o valor como rotulo da barra.
 
 import { formatarPct } from "../utils/formatos";
 import type { Pasta } from "./xlsx";
@@ -73,28 +74,100 @@ function trocarTextoVinculado(forma: Element, texto: string) {
   }
 }
 
+function elementoC(doc: Document, nome: string, val?: string): Element {
+  const e = doc.createElementNS(NS_C, `c:${nome}`);
+  if (val !== undefined) e.setAttribute("val", val);
+  return e;
+}
+
 /**
- * Caixas de texto por cima das barras (valor de cada barra, escrito na vertical).
- * Sao vinculadas a C3 (referencia) e C4 (cobrada); na Minuta Parcial o vinculo
- * estava quebrado (#REF!) e elas mostravam valores de outro caso.
+ * Arruma o grafico de barras "COMPARATIVO DOS JUROS" do modelo, que:
+ *   - deixava o eixo comecar perto do menor valor (ex.: 1,90%) -- em varios visualizadores
+ *     (Excel online, Google Planilhas, celular) isso faz as barras sairem PARA BAIXO;
+ *   - tinha a legenda posicionada a mao no meio do grafico, por cima da 2a barra;
+ *   - mostrava os valores em caixas de texto soltas (removidas em removerCaixasDasBarras).
  */
-async function atualizarCaixasDasBarras(pasta: Pasta, nomeAba: string, v: ValoresGrafico) {
-  const valorDa: Record<string, number> = { $C$3: v.taxaReferencia, $C$4: v.taxaCobrada };
+function arrumarGraficoDeBarras(doc: Document, barras: Element) {
+  // Eixo de valores: sempre de 0% para cima, em percentual.
+  const eixo = doc.getElementsByTagNameNS(NS_C, "valAx")[0];
+  if (eixo) {
+    const escala = filhoC(eixo, "scaling")!;
+    for (const lim of [...filhosC(escala, "min"), ...filhosC(escala, "max")]) escala.removeChild(lim);
+    const orientacao = filhoC(escala, "orientation");
+    escala.insertBefore(elementoC(doc, "min", "0"), orientacao ? orientacao.nextSibling : escala.firstChild);
+    const formato = filhoC(eixo, "numFmt");
+    formato?.setAttribute("formatCode", "0.00%");
+    formato?.setAttribute("sourceLinked", "0");
+  }
+
+  // Area do grafico e legenda em layout automatico, legenda embaixo (sem cobrir as barras).
+  const area = doc.getElementsByTagNameNS(NS_C, "plotArea")[0];
+  const layoutArea = area && filhoC(area, "layout");
+  if (layoutArea) while (layoutArea.firstChild) layoutArea.removeChild(layoutArea.firstChild);
+  const legenda = doc.getElementsByTagNameNS(NS_C, "legend")[0];
+  if (legenda) {
+    filhoC(legenda, "legendPos")?.setAttribute("val", "b");
+    const layoutLegenda = filhoC(legenda, "layout");
+    if (layoutLegenda) legenda.removeChild(layoutLegenda);
+  }
+
+  // Valor em cima de cada barra (rotulo do proprio grafico, acompanha a altura da barra).
+  for (const ser of filhosC(barras, "ser")) {
+    for (const d of filhosC(ser, "dLbls")) ser.removeChild(d);
+  }
+  let rotulos = filhoC(barras, "dLbls");
+  if (!rotulos) {
+    rotulos = elementoC(doc, "dLbls");
+    barras.insertBefore(rotulos, filhoC(barras, "gapWidth") ?? filhoC(barras, "overlap") ?? filhoC(barras, "axId") ?? null);
+  }
+  while (rotulos.firstChild) rotulos.removeChild(rotulos.firstChild);
+  const numFmt = elementoC(doc, "numFmt");
+  numFmt.setAttribute("formatCode", "0.00%");
+  numFmt.setAttribute("sourceLinked", "0");
+  rotulos.appendChild(numFmt);
+  const txPr = elementoC(doc, "txPr");
+  const a = (nome: string) => doc.createElementNS(NS_A, `a:${nome}`);
+  const pPr = a("pPr");
+  const defRPr = a("defRPr");
+  defRPr.setAttribute("sz", "1100");
+  defRPr.setAttribute("b", "1");
+  pPr.appendChild(defRPr);
+  const paragrafo = a("p");
+  paragrafo.appendChild(pPr);
+  const fim = a("endParaRPr");
+  fim.setAttribute("lang", "pt-BR");
+  paragrafo.appendChild(fim);
+  txPr.appendChild(a("bodyPr"));
+  txPr.appendChild(a("lstStyle"));
+  txPr.appendChild(paragrafo);
+  rotulos.appendChild(txPr);
+  rotulos.appendChild(elementoC(doc, "dLblPos", "outEnd"));
+  for (const [nome, val] of [
+    ["showLegendKey", "0"],
+    ["showVal", "1"],
+    ["showCatName", "0"],
+    ["showSerName", "0"],
+    ["showPercent", "0"],
+    ["showBubbleSize", "0"],
+  ]) {
+    rotulos.appendChild(elementoC(doc, nome, val));
+  }
+}
+
+/**
+ * Remove as caixas de texto soltas que o modelo punha por cima das barras (ligadas a
+ * C3/C4). Ficavam em posicao fixa -- desalinhadas das barras -- e, na Minuta Parcial,
+ * com o vinculo quebrado. O valor agora e o rotulo da propria barra.
+ */
+async function removerCaixasDasBarras(pasta: Pasta, nomeAba: string) {
   for (const caminho of await pasta.desenhosDaAba(nomeAba)) {
     const doc = await pasta.parte(caminho);
     const caixas = Array.from(doc.getElementsByTagNameNS(NS_XDR, "sp")).filter((sp) =>
       Array.from(sp.getElementsByTagNameNS(NS_A, "fld")).some((f) => f.getAttribute("type") === "TxLink"),
     );
-    // As caixas quebradas recebem, na ordem, as celulas que ainda nao tem caixa.
-    const livres = Object.keys(valorDa).filter((ref) => !caixas.some((sp) => sp.getAttribute("textlink") === ref));
     for (const sp of caixas) {
-      let ref = sp.getAttribute("textlink") ?? "";
-      if (!(ref in valorDa)) {
-        ref = livres.shift() ?? "";
-        if (!ref) continue;
-        sp.setAttribute("textlink", ref);
-      }
-      trocarTextoVinculado(sp, pctTexto(valorDa[ref]));
+      const ancora = sp.parentNode as Element; // twoCellAnchor / oneCellAnchor / absoluteAnchor
+      ancora.parentNode?.removeChild(ancora);
     }
   }
 }
@@ -119,6 +192,7 @@ export async function atualizarGraficosDaAba(pasta: Pasta, nomeAba: string, v: V
         const valores = filhoC(filhoC(ser, "val")!, "numRef")!;
         religar(valores, `${aba}$C$${linha}`, [i === 0 ? v.taxaReferencia : v.taxaCobrada]);
       });
+      arrumarGraficoDeBarras(doc, barras);
     }
 
     if (rosca) {
@@ -133,5 +207,5 @@ export async function atualizarGraficosDaAba(pasta: Pasta, nomeAba: string, v: V
     }
   }
 
-  await atualizarCaixasDasBarras(pasta, nomeAba, v);
+  await removerCaixasDasBarras(pasta, nomeAba);
 }
