@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/bacen/:path*",
+      "destination": "https://olinda.bcb.gov.br/olinda/servico/taxaJuros/versao/v2/odata/:path*"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+node_modules
+dist
+*.local
+.vite
+.vercel
+
+# Planilhas e documentos originais do escritorio: tem dados de clientes e NUNCA
+# devem ir para o repositorio. Os modelos publicos ficam em public/modelos/
+# (limpos com `npm run limpar:modelos`).
+/*.xlsx
+/*.pdf
