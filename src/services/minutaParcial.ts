@@ -164,6 +164,7 @@ function preencherQuitacao(
   l: LinhasModelo,
 ) {
   aba.texto("D3", numeroContrato.trim());
+  aba.texto("F4", "SALDO A PAGAR"); // no modelo: "QUITADO NA PARCELA"
   for (const [ref, cel] of Object.entries(cabecalho)) gravar(aba, ref, cel);
 
   const molde = {
