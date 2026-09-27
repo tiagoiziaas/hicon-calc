@@ -18,6 +18,9 @@ const NS_C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 const NS_XDR = "http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing";
 
+/** Espaco entre os grupos de barras, em % da largura da barra (quanto maior, mais fina a barra). */
+const LARGURA_ESPACO_BARRAS = 180;
+
 /** Tamanhos de fonte dos graficos, em centesimos de ponto (1600 = 16 pt). */
 const FONTE = {
   titulo: 1600,
@@ -129,6 +132,15 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
     const layoutLegenda = filhoC(legenda, "layout");
     if (layoutLegenda) legenda.removeChild(layoutLegenda);
   }
+
+  // Barras ("velas") mais finas: mais espaco em volta de cada grupo de barras.
+  // No modelo o gapWidth era 20 (barras bem largas); 180 deixa cada barra ~2/3 da largura original.
+  let espaco = filhoC(barras, "gapWidth");
+  if (!espaco) {
+    espaco = elementoC(doc, "gapWidth");
+    barras.insertBefore(espaco, filhoC(barras, "overlap") ?? filhoC(barras, "axId") ?? null);
+  }
+  espaco.setAttribute("val", String(LARGURA_ESPACO_BARRAS));
 
   // Valor em cima de cada barra (rotulo do proprio grafico, acompanha a altura da barra).
   for (const ser of filhosC(barras, "ser")) {
