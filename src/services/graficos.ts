@@ -142,7 +142,7 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   }
   espaco.setAttribute("val", String(LARGURA_ESPACO_BARRAS));
 
-  // Valor em cima de cada barra (rotulo do proprio grafico, acompanha a altura da barra).
+  // Valor dentro de cada barra, no topo (rotulo do proprio grafico, acompanha a altura da barra).
   for (const ser of filhosC(barras, "ser")) {
     for (const d of filhosC(ser, "dLbls")) ser.removeChild(d);
   }
@@ -162,6 +162,12 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   const defRPr = a("defRPr");
   defRPr.setAttribute("sz", String(FONTE.valorBarra));
   defRPr.setAttribute("b", "1");
+  // Texto branco: o valor fica DENTRO da barra (vermelha/dourada).
+  const preenchimento = a("solidFill");
+  const cor = a("srgbClr");
+  cor.setAttribute("val", "FFFFFF");
+  preenchimento.appendChild(cor);
+  defRPr.appendChild(preenchimento);
   pPr.appendChild(defRPr);
   const paragrafo = a("p");
   paragrafo.appendChild(pPr);
@@ -172,7 +178,7 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   txPr.appendChild(a("lstStyle"));
   txPr.appendChild(paragrafo);
   rotulos.appendChild(txPr);
-  rotulos.appendChild(elementoC(doc, "dLblPos", "outEnd"));
+  rotulos.appendChild(elementoC(doc, "dLblPos", "inEnd")); // dentro da barra, no topo
   for (const [nome, val] of [
     ["showLegendKey", "0"],
     ["showVal", "1"],

@@ -59,7 +59,7 @@ function preencherDados(aba: Aba, d: DadosMinuta, pc: ResumoParcial) {
   aba.formula("I29", "I27*I20", c.parcelasPagas * c.parcela);
   aba.formula("I33", `'${ABAS_PARCIAL.indiceContrato}'!C5`, pc.percentualAcima);
 
-  aba.formula("I38", `'${ABAS_PARCIAL.taxaMedia}'!E46`, d.taxaMedia);
+  aba.formula("I38", `'${ABAS_PARCIAL.taxaMedia}'!E${LINHA_TAXA}`, d.taxaMedia);
   aba.formula("I39", `${T}D50`, h.parcelaNaTaxaReferencia);
   aba.formula("I42", `${T}D41`, h.quitacaoNaParcela);
 
@@ -76,14 +76,21 @@ function preencherDatas(aba: Aba, d: DadosMinuta) {
 }
 
 const LINHA_INICIAL_TAXAS = 8;
-const LINHAS_TAXAS = 37; // linhas 8 a 44 no modelo
+/** Posicoes do ranking do Bacen mostradas na aba (o modelo trazia 37; o escritorio usa ate a 20a). */
+const POSICOES_TAXAS = 20;
+// No modelo, abaixo das 37 posicoes: linha 45 = media do top 5 (%), linha 46 = taxa usada (decimal).
+const LINHA_MEDIA_MODELO = 45;
+const LINHA_TAXA_MODELO = 46;
+/** Depois de remover as posicoes 21 em diante, as duas linhas sobem para logo abaixo da 20a. */
+const LINHA_MEDIA = LINHA_INICIAL_TAXAS + POSICOES_TAXAS;
+const LINHA_TAXA = LINHA_MEDIA + 1;
 
 function preencherTaxaMedia(aba: Aba, d: DadosMinuta) {
   const b = d.bacen;
   data(aba, "D4", b.periodoInicio);
   data(aba, "F4", b.periodoFim);
   aba.texto("D5", b.modalidade);
-  for (let k = 0; k < LINHAS_TAXAS; k++) {
+  for (let k = 0; k < POSICOES_TAXAS; k++) {
     const linha = LINHA_INICIAL_TAXAS + k;
     const inst = b.ranking[k];
     if (inst) {
@@ -96,15 +103,19 @@ function preencherTaxaMedia(aba: Aba, d: DadosMinuta) {
       for (const col of ["B", "C", "D", "E", "F"]) aba.limpar(`${col}${linha}`);
     }
   }
-  aba.cache("E45", b.mediaAoMes ?? 0);
-  aba.numero("E46", d.taxaMedia);
+
+  // Remove as posicoes 21 em diante e sobe as linhas da media para logo abaixo da 20a.
+  const linhaMedia = aba.clonarLinha(LINHA_MEDIA_MODELO);
+  const linhaTaxa = aba.clonarLinha(LINHA_TAXA_MODELO);
+  aba.removerLinhasAPartirDe(LINHA_MEDIA);
+  aba.removerMesclagensAPartirDe(LINHA_MEDIA);
+  aba.inserirLinha(linhaMedia, LINHA_MEDIA);
+  aba.inserirLinha(linhaTaxa, LINHA_TAXA);
+  aba.formula(`E${LINHA_MEDIA}`, "SUM(E8:E12)/5", b.mediaAoMes ?? 0);
+  aba.numero(`E${LINHA_TAXA}`, d.taxaMedia);
+  aba.dimensao(`B1:J${LINHA_TAXA}`);
 }
 
-/**
- * Abas de indice: C3 = taxa de referencia, C4 = "Taxa Cobrada pelo Banco".
- * A taxa cobrada e SEMPRE a Taxa de Juros Praticada da aba TODOS 6 CALCULOS (D6).
- * Devolve o % acima (C5).
- */
 function preencherIndice(aba: Aba, referencia: number, praticada: number, formulaRef?: string): number {
   const pct = percentualAcima(praticada, referencia);
   if (formulaRef) aba.formula("C3", formulaRef, referencia);
