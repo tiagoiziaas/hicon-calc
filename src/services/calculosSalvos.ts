@@ -1,6 +1,6 @@
 // Calculos salvos no Supabase (tabela public.calculos -- ver supabase/schema.sql).
 
-import type { Cenarios, IdCenario, Identificacao } from "../types/cenarios";
+import type { Cenarios, ConfigHiscon, IdCenario, Identificacao } from "../types/cenarios";
 import { cenarioVazio } from "../types/cenarios";
 import type { ResultadoTop5 } from "./bacen";
 import { resumoParcial, type Calculo } from "./calculoCenarios";
@@ -23,11 +23,13 @@ export interface ResumoSalvo {
 export interface CalculoSalvo extends ResumoSalvo {
   identificacao: Identificacao;
   cenarios: Cenarios;
+  configHiscon: ConfigHiscon;
 }
 
 export interface DadosParaSalvar {
   identificacao: Identificacao;
   cenarios: Cenarios;
+  configHiscon: ConfigHiscon;
   modelo: IdModelo;
   calculos: Record<IdCenario, Calculo>;
   bacen: ResultadoTop5 | null;
@@ -94,7 +96,7 @@ type Linha = {
   numero_contrato: string | null;
   data_referencia: string | null;
   modelo: IdModelo | null;
-  cenarios?: Partial<Cenarios>;
+  cenarios?: Partial<Cenarios> & { configHiscon?: Partial<ConfigHiscon> };
 };
 
 const paraResumo = (l: Linha): ResumoSalvo => ({
@@ -114,7 +116,8 @@ export async function salvarCalculo(d: DadosParaSalvar, idExistente?: string | n
     numero_contrato: d.identificacao.numeroContrato.trim() || null,
     data_referencia: d.identificacao.dataReferencia || null,
     modelo: d.modelo,
-    cenarios: d.cenarios,
+    // A configuracao do Hiscon vai junto no JSON dos cenarios (sem mudar a tabela).
+    cenarios: { ...d.cenarios, configHiscon: d.configHiscon },
     taxa_media: d.taxaMedia,
     bacen: d.bacen
       ? {
@@ -174,5 +177,9 @@ export async function carregarCalculo(id: string): Promise<CalculoSalvo> {
       dataReferencia: l.data_referencia ?? new Date().toISOString().slice(0, 10),
     },
     cenarios,
+    configHiscon: {
+      ativo: Boolean(salvos.configHiscon?.ativo),
+      mesAtual: salvos.configHiscon?.mesAtual || new Date().toISOString().slice(0, 10),
+    },
   };
 }

@@ -3,6 +3,7 @@ import {
   cenarioVazio,
   cenariosVazios,
   type Cenarios,
+  type ConfigHiscon,
   type DadosCenario,
   type IdCenario,
   type Identificacao,
@@ -12,6 +13,9 @@ import { hojeIso } from "../utils/datas";
 const CHAVE = "hicon-cenarios";
 const CHAVE_IDENTIFICACAO = "hicon-identificacao";
 const CHAVE_ID_SALVO = "hicon-id-salvo";
+const CHAVE_HISCON = "hicon-config-hiscon";
+
+export const configHisconPadrao = (): ConfigHiscon => ({ ativo: false, mesAtual: hojeIso() });
 
 function ler<T>(chave: string): Partial<T> | null {
   try {
@@ -51,6 +55,11 @@ const carregarIdentificacao = (): Identificacao => ({
 export function useCenarios() {
   const [cenarios, setCenarios] = useState<Cenarios>(carregarCenarios);
   const [identificacao, setIdentificacao] = useState<Identificacao>(carregarIdentificacao);
+  /** "O contrato e do Hiscon?" + mes atual (taxa e meses calculados sozinhos). */
+  const [configHiscon, setConfigHiscon] = useState<ConfigHiscon>(() => ({
+    ...configHisconPadrao(),
+    ...ler<ConfigHiscon>(CHAVE_HISCON),
+  }));
   /** Registro do banco que esta aberto no formulario (salvar de novo atualiza ele). */
   const [idSalvo, setIdSalvo] = useState<string | null>(() => {
     try {
@@ -62,6 +71,7 @@ export function useCenarios() {
 
   useEffect(() => gravar(CHAVE, cenarios), [cenarios]);
   useEffect(() => gravar(CHAVE_IDENTIFICACAO, identificacao), [identificacao]);
+  useEffect(() => gravar(CHAVE_HISCON, configHiscon), [configHiscon]);
   useEffect(() => {
     try {
       if (idSalvo) localStorage.setItem(CHAVE_ID_SALVO, idSalvo);
@@ -96,14 +106,23 @@ export function useCenarios() {
   const limparTodos = useCallback(() => {
     setCenarios(cenariosVazios());
     setIdentificacao({ nomeCliente: "", numeroContrato: "", dataReferencia: hojeIso() });
+    setConfigHiscon(configHisconPadrao());
     setIdSalvo(null);
   }, []);
 
   /** Abre um calculo salvo no formulario. */
-  const carregar = useCallback((dados: { id: string; cenarios: Cenarios; identificacao: Identificacao }) => {
-    setCenarios(dados.cenarios);
-    setIdentificacao(dados.identificacao);
-    setIdSalvo(dados.id);
+  const carregar = useCallback(
+    (dados: { id: string; cenarios: Cenarios; identificacao: Identificacao; configHiscon: ConfigHiscon }) => {
+      setCenarios(dados.cenarios);
+      setIdentificacao(dados.identificacao);
+      setConfigHiscon(dados.configHiscon);
+      setIdSalvo(dados.id);
+    },
+    [],
+  );
+
+  const atualizarHiscon = useCallback(<K extends keyof ConfigHiscon>(campo: K, valor: ConfigHiscon[K]) => {
+    setConfigHiscon((atual) => ({ ...atual, [campo]: valor }));
   }, []);
 
   const atualizarIdentificacao = useCallback(<K extends keyof Identificacao>(campo: K, valor: Identificacao[K]) => {
@@ -113,6 +132,8 @@ export function useCenarios() {
   return {
     cenarios,
     identificacao,
+    configHiscon,
+    atualizarHiscon,
     idSalvo,
     setIdSalvo,
     atualizar,

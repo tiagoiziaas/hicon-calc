@@ -12,14 +12,17 @@ const CHAVE_ASSINATURA = "hicon-assinatura-salva";
  */
 export function useCalculoAtual() {
   const cenariosHook = useCenarios();
-  const { cenarios, identificacao, setIdSalvo, limparTodos, carregar } = cenariosHook;
+  const { cenarios, identificacao, configHiscon, setIdSalvo, limparTodos, carregar } = cenariosHook;
 
   /** Muda a cada gravacao para a lista de salvos recarregar. */
   const [versaoLista, setVersaoLista] = useState(0);
   /** Minuta (Total/Parcial) do calculo que acabou de ser aberto do banco. */
   const [modeloAberto, setModeloAberto] = useState<IdModelo | null>(null);
 
-  const assinaturaAtual = useMemo(() => JSON.stringify({ cenarios, identificacao }), [cenarios, identificacao]);
+  const assinaturaAtual = useMemo(
+    () => JSON.stringify({ cenarios, identificacao, configHiscon }),
+    [cenarios, identificacao, configHiscon],
+  );
   // Lembrada no navegador: ao recarregar a pagina o calculo aberto continua "salvo".
   const [assinaturaSalva, setAssinaturaSalva] = useState<string | null>(() => {
     try {
@@ -42,7 +45,9 @@ export function useCalculoAtual() {
   const abrir = useCallback(
     (calc: CalculoSalvo) => {
       carregar(calc);
-      setAssinaturaSalva(JSON.stringify({ cenarios: calc.cenarios, identificacao: calc.identificacao }));
+      setAssinaturaSalva(
+        JSON.stringify({ cenarios: calc.cenarios, identificacao: calc.identificacao, configHiscon: calc.configHiscon }),
+      );
       setModeloAberto(calc.modelo);
     },
     [carregar],

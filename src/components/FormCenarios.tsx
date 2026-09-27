@@ -1,4 +1,6 @@
+import { useEffect, useMemo } from "react";
 import type { CalculoAtual } from "../hooks/useCalculoAtual";
+import { calcularHiscon } from "../services/hiscon";
 import { CENARIOS, camposPreenchidos, totalCampos, type DadosCenario, type IdCenario } from "../types/cenarios";
 import { CampoData, CampoInteiro, CampoMoeda, CampoTaxa, CampoTexto } from "./Campos";
 import { GerarMinuta } from "./GerarMinuta";
@@ -25,6 +27,8 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
   const {
     cenarios,
     identificacao,
+    configHiscon,
+    atualizarHiscon,
     idSalvo,
     atualizar,
     atualizarTodos,
@@ -40,6 +44,21 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
   // O bloco comum mostra os valores do contrato bancario (os 3 recebem o que for digitado nele).
   const comum = cenarios.contrato;
   const divergentes = (id: IdCenario) => CAMPOS_COMUNS.filter((k) => cenarios[id][k] !== comum[k]);
+
+  // Contrato do Hiscon: taxa de juros e numero de meses calculados sozinhos (planilha "forma DAta").
+  const hiscon = configHiscon.ativo;
+  const calcHiscon = useMemo(
+    () => (hiscon ? calcularHiscon(comum, configHiscon) : null),
+    [hiscon, comum, configHiscon],
+  );
+  // Grava o resultado nos 3 cenarios sempre que a data, os valores ou o mes atual mudam.
+  useEffect(() => {
+    if (!calcHiscon?.ok) return;
+    const { meses, taxaTexto } = calcHiscon;
+    const ids: IdCenario[] = ["contrato", "hiscon", "in28"];
+    if (ids.some((id) => cenarios[id].totalParcelas !== meses)) atualizarTodos("totalParcelas", meses);
+    if (ids.some((id) => cenarios[id].taxaJuros !== taxaTexto)) atualizarTodos("taxaJuros", taxaTexto);
+  }, [calcHiscon, cenarios, atualizarTodos]);
 
   return (
     <section className="cenarios">
@@ -61,8 +80,60 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
             precisar de um valor diferente, ajuste direto no card dele.
           </p>
         </header>
+        <div className="hiscon-pergunta">
+          <span className="hiscon-rotulo">O contrato é do Hiscon?</span>
+          <div className="segmented" role="radiogroup" aria-label="O contrato é do Hiscon?">
+            {[
+              { valor: true, texto: "Sim" },
+              { valor: false, texto: "Não" },
+            ].map((op) => (
+              <button
+                key={op.texto}
+                type="button"
+                role="radio"
+                aria-checked={hiscon === op.valor}
+                className={hiscon === op.valor ? "ativo" : undefined}
+                onClick={() => atualizarHiscon("ativo", op.valor)}
+              >
+                {op.texto}
+              </button>
+            ))}
+          </div>
+          {hiscon && (
+            <>
+              <div className="hiscon-mes">
+                <CampoData
+                  id="hiscon-mes-atual"
+                  rotulo="Mês atual"
+                  valor={configHiscon.mesAtual}
+                  onChange={(v) => v && atualizarHiscon("mesAtual", v)}
+                />
+              </div>
+              <div className={calcHiscon?.ok ? "hiscon-resultado" : "hiscon-resultado pendente"}>
+                {calcHiscon?.ok ? (
+                  <>
+                    <span>
+                      Número de meses: <strong>{calcHiscon.meses}</strong>
+                    </span>
+                    <span>
+                      Taxa de juros praticada: <strong>{calcHiscon.taxaTexto}% a.m.</strong>
+                    </span>
+                    <small className="muted">Preenchidos automaticamente nos 3 cenários.</small>
+                  </>
+                ) : (
+                  <span>{calcHiscon?.motivo}</span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
         <div className="comuns-campos">
-          <CampoData id="comum-data" rotulo="Data da contratação" valor={comum.data} onChange={(v) => atualizarTodos("data", v)} />
+          <CampoData
+            id="comum-data"
+            rotulo={hiscon ? "Data da inclusão" : "Data da contratação"}
+            valor={comum.data}
+            onChange={(v) => atualizarTodos("data", v)}
+          />
           <CampoTexto
             id="comum-banco"
             rotulo="Nome do banco"
@@ -84,9 +155,10 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
           />
           <CampoInteiro
             id="comum-parcelas"
-            rotulo="Total de parcelas"
+            rotulo={hiscon ? "Total de parcelas (nº de meses · automático)" : "Total de parcelas"}
             sufixo="parcelas"
             valor={comum.totalParcelas}
+            desabilitado={hiscon}
             onChange={(v) => atualizarTodos("totalParcelas", v)}
           />
           <CampoData
@@ -167,15 +239,17 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                 />
                 <CampoTaxa
                   id={campo("taxa")}
-                  rotulo="Taxa de juros contratada"
+                  rotulo={hiscon ? "Taxa de juros (automática · Hiscon)" : "Taxa de juros contratada"}
                   valor={c.taxaJuros}
+                  desabilitado={hiscon}
                   onChange={(v) => atualizar(def.id, "taxaJuros", v)}
                 />
                 <CampoInteiro
                   id={campo("parcelas")}
-                  rotulo="Total de parcelas"
+                  rotulo={hiscon ? "Total de parcelas (automático · Hiscon)" : "Total de parcelas"}
                   sufixo="parcelas"
                   valor={c.totalParcelas}
+                  desabilitado={hiscon}
                   onChange={(v) => atualizar(def.id, "totalParcelas", v)}
                 />
                 <CampoData
@@ -228,6 +302,7 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
 
       <GerarMinuta
         cenarios={cenarios}
+        configHiscon={configHiscon}
         identificacao={identificacao}
         onIdentificacao={atualizarIdentificacao}
         idSalvo={idSalvo}

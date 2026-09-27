@@ -10,12 +10,13 @@ import {
 import { salvarCalculo, type ResumoSalvo } from "../services/calculosSalvos";
 import { MODELOS, type IdModelo } from "../services/modelosMinuta";
 import { supabaseConfigurado } from "../services/supabase";
-import { CENARIOS, type Cenarios, type IdCenario, type Identificacao } from "../types/cenarios";
+import { CENARIOS, type Cenarios, type ConfigHiscon, type IdCenario, type Identificacao } from "../types/cenarios";
 import { formatarDataBr, formatarPct } from "../utils/formatos";
 import { CampoData, CampoTexto } from "./Campos";
 
 interface Props {
   cenarios: Cenarios;
+  configHiscon: ConfigHiscon;
   identificacao: Identificacao;
   onIdentificacao: <K extends keyof Identificacao>(campo: K, valor: Identificacao[K]) => void;
   /** Registro do banco aberto no formulario (salvar atualiza ele). */
@@ -99,7 +100,7 @@ function ResultadoParcial({ id, r }: { id: IdCenario; r: ResultadoCenario }) {
   );
 }
 
-export function GerarMinuta({ cenarios, identificacao, onIdentificacao, idSalvo, alterado, modeloAberto, onSalvo }: Props) {
+export function GerarMinuta({ cenarios, configHiscon, identificacao, onIdentificacao, idSalvo, alterado, modeloAberto, onSalvo }: Props) {
   const dataHiscon = cenarios.hiscon.data;
   const [modelo, setModelo] = useState<IdModelo>(lerModelo);
   const [salvando, setSalvando] = useState(false);
@@ -212,6 +213,7 @@ export function GerarMinuta({ cenarios, identificacao, onIdentificacao, idSalvo,
         {
           identificacao,
           cenarios,
+          configHiscon,
           modelo,
           calculos,
           bacen: bacen.tipo === "ok" ? bacen.top : null,

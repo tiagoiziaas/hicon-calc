@@ -36,9 +36,11 @@ export function CampoMoeda({ id, rotulo, valor, onChange }: CampoBase & {
 }
 
 /** Taxa em % a.m. com ate 4 casas decimais (ex.: 1,85). */
-export function CampoTaxa({ id, rotulo, valor, onChange }: CampoBase & {
+export function CampoTaxa({ id, rotulo, valor, onChange, desabilitado }: CampoBase & {
   valor: string;
   onChange: (valor: string) => void;
+  /** Campo calculado sozinho (ex.: Hiscon): so mostra o valor. */
+  desabilitado?: boolean;
 }) {
   return (
     <div className="form-campo">
@@ -48,6 +50,7 @@ export function CampoTaxa({ id, rotulo, valor, onChange }: CampoBase & {
           id={id}
           inputMode="decimal"
           placeholder="0,00"
+          disabled={desabilitado}
           value={valor}
           onChange={(e) => {
             let v = e.target.value.replace(/\./g, ",").replace(/[^\d,]/g, "");
@@ -62,10 +65,12 @@ export function CampoTaxa({ id, rotulo, valor, onChange }: CampoBase & {
   );
 }
 
-export function CampoInteiro({ id, rotulo, valor, sufixo, onChange }: CampoBase & {
+export function CampoInteiro({ id, rotulo, valor, sufixo, onChange, desabilitado }: CampoBase & {
   valor: number | null;
   sufixo?: string;
   onChange: (valor: number | null) => void;
+  /** Campo calculado sozinho (ex.: Hiscon): so mostra o valor. */
+  desabilitado?: boolean;
 }) {
   return (
     <div className="form-campo">
@@ -75,6 +80,7 @@ export function CampoInteiro({ id, rotulo, valor, sufixo, onChange }: CampoBase 
           id={id}
           inputMode="numeric"
           placeholder="0"
+          disabled={desabilitado}
           value={valor ?? ""}
           onChange={(e) => {
             const digitos = e.target.value.replace(/\D/g, "").slice(0, 4);

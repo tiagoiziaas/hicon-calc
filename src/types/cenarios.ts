@@ -96,6 +96,17 @@ export function taxaDecimal(texto: string): number | null {
   return Number.isFinite(n) && n > 0 ? n / 100 : null;
 }
 
+/**
+ * Contrato do Hiscon: a taxa de juros e o numero de meses sao calculados sozinhos
+ * (planilha "forma DAta"): meses = meses completos da data de inclusao ate o mes atual;
+ * taxa = RATE(meses; -parcela; valor contratado). Vale para os 3 cenarios.
+ */
+export interface ConfigHiscon {
+  ativo: boolean;
+  /** "aaaa-mm-dd" -- "mes atual" (fim do periodo contado). */
+  mesAtual: string;
+}
+
 /** Dados que valem para a planilha toda (cabecalho da aba DADOS PARA PETIÇÃO INICIAL). */
 export interface Identificacao {
   nomeCliente: string;

@@ -58,3 +58,13 @@ export function parcelasVencidas(primeiraParcela: string, totalParcelas: number,
   while (vencidas < totalParcelas && somarMeses(primeiraParcela, vencidas) <= dataReferencia) vencidas++;
   return vencidas;
 }
+
+/**
+ * Meses completos entre duas datas, como na planilha "forma DAta":
+ * DATEDIF(inicio; fim; "Y") * 12 + DATEDIF(inicio; fim; "YM"). Datas "aaaa-mm-dd".
+ */
+export function mesesCompletos(inicio: string, fim: string): number {
+  const [a1, m1, d1] = inicio.split("-").map(Number);
+  const [a2, m2, d2] = fim.split("-").map(Number);
+  return (a2 - a1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
+}
