@@ -51,6 +51,13 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
     () => (hiscon ? calcularHiscon(comum, configHiscon) : null),
     [hiscon, comum, configHiscon],
   );
+  // A taxa maxima da IN 28 e sempre a mesma taxa de juros do cenario IN 28.
+  useEffect(() => {
+    if (cenarios.in28.taxaTetoIn28 !== cenarios.in28.taxaJuros) {
+      atualizar("in28", "taxaTetoIn28", cenarios.in28.taxaJuros);
+    }
+  }, [cenarios.in28.taxaJuros, cenarios.in28.taxaTetoIn28, atualizar]);
+
   // Grava o resultado nos 3 cenarios sempre que a data, os valores ou o mes atual mudam.
   useEffect(() => {
     if (!calcHiscon?.ok) return;
@@ -269,9 +276,10 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                 {def.id === "in28" && (
                   <CampoTaxa
                     id={campo("teto")}
-                    rotulo="Taxa máxima da IN 28 (teto na data)"
+                    rotulo="Taxa máxima da IN 28 (igual à taxa de juros)"
                     valor={c.taxaTetoIn28}
-                    onChange={(v) => atualizar(def.id, "taxaTetoIn28", v)}
+                    desabilitado
+                    onChange={() => undefined}
                   />
                 )}
               </div>
