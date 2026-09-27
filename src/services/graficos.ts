@@ -142,7 +142,7 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   }
   espaco.setAttribute("val", String(LARGURA_ESPACO_BARRAS));
 
-  // Valor dentro de cada barra, no topo (rotulo do proprio grafico, acompanha a altura da barra).
+  // Valor centralizado dentro de cada barra (rotulo do proprio grafico, acompanha a altura da barra).
   for (const ser of filhosC(barras, "ser")) {
     for (const d of filhosC(ser, "dLbls")) ser.removeChild(d);
   }
@@ -178,7 +178,7 @@ function arrumarGraficoDeBarras(doc: Document, barras: Element) {
   txPr.appendChild(a("lstStyle"));
   txPr.appendChild(paragrafo);
   rotulos.appendChild(txPr);
-  rotulos.appendChild(elementoC(doc, "dLblPos", "inEnd")); // dentro da barra, no topo
+  rotulos.appendChild(elementoC(doc, "dLblPos", "ctr")); // centralizado dentro da barra
   for (const [nome, val] of [
     ["showLegendKey", "0"],
     ["showVal", "1"],
