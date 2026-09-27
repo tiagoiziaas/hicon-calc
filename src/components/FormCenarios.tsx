@@ -57,7 +57,7 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
         <header className="comuns-head">
           <h2>Dados comuns aos 3 cenários</h2>
           <p className="muted">
-            Preenchidos aqui, vão para Contrato bancário, Extraídos do Hiscon e Instrução Normativa 28. Se um cenário
+            Preenchidos aqui, vão para Contrato bancário, Extraídos do BACEN e Instrução Normativa 28. Se um cenário
             precisar de um valor diferente, ajuste direto no card dele.
           </p>
         </header>

@@ -283,7 +283,7 @@ export function GerarMinuta({ cenarios, identificacao, onIdentificacao, idSalvo,
 
       <div className="minuta-bacen">
         {bacen.tipo === "sem-data" && (
-          <span className="muted">Taxa média BACEN: preencha a data da inclusão do Hiscon.</span>
+          <span className="muted">Taxa média BACEN: preencha a data da inclusão em "Extraídos do BACEN".</span>
         )}
         {bacen.tipo === "carregando" && <span className="muted">Buscando a taxa média no BACEN…</span>}
         {bacen.tipo === "erro" && <span className="texto-erro">BACEN: {bacen.mensagem}</span>}

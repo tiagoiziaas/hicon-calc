@@ -38,7 +38,7 @@ export const CENARIOS: DefinicaoCenario[] = [
   },
   {
     id: "hiscon",
-    titulo: "Extraídos do Hiscon",
+    titulo: "Extraídos do BACEN",
     descricao: "Abas 1.1.1 / 1.1 · taxa média BACEN",
     rotuloData: "Data da inclusão",
   },

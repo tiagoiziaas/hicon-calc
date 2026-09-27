@@ -32,7 +32,7 @@ Na aba "Dados dos cenários", o painel **Gerar planilha da Minuta** tem um selet
 | Cenário do sistema | Minuta Total | Minuta Parcial | Taxa usada no recálculo |
 |---|---|---|---|
 | Contrato bancário | 3.3.3 QUITAÇÃO TAXA CONTRATUAL | 3.3 QUITAÇÃO TAXA CONTRATUAL | taxa contratada |
-| Extraídos do Hiscon | 1.1.1 QUITAÇÃO PELA TAXA MEDIA | 1.1 QUITACAO PARCIAL TAXA MEDIA | média do top 5 do BACEN na data da inclusão (4 casas) |
+| Extraídos do BACEN | 1.1.1 QUITAÇÃO PELA TAXA MEDIA | 1.1 QUITACAO PARCIAL TAXA MEDIA | média do top 5 do BACEN na data da inclusão (4 casas) |
 | Instrução Normativa 28 | 2.2.2 QUITAÇÃO PELA IN 28 INSS | 2.2 QUITAÇÃO PARCIAL TAX IN 28 | taxa máxima da IN 28 informada |
 
 - **Total**: acha a parcela em que a dívida estaria quitada (NPER); as parcelas depois dela são o indébito.

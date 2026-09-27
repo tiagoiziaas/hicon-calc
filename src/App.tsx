@@ -175,7 +175,7 @@ export default function App() {
                 Dados para os <span className="grad">3 cenários de cálculo</span>
               </h1>
               <p>
-                Contrato bancário, dados extraídos do Hiscon e dados para a Instrução Normativa 28 do INSS. Preencha
+                Contrato bancário, dados extraídos do BACEN e dados para a Instrução Normativa 28 do INSS. Preencha
                 cada cenário para comparar e calcular.
               </p>
             </section>
