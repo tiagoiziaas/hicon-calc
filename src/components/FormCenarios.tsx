@@ -116,7 +116,7 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                       Número de meses: <strong>{calcHiscon.meses}</strong>
                     </span>
                     <span>
-                      Taxa de juros praticada: <strong>{calcHiscon.taxaTexto}% a.m.</strong>
+                      Taxa de juros praticada: <strong>{calcHiscon.taxaExibicao}% a.m.</strong>
                     </span>
                     <small className="muted">Preenchidos automaticamente nos 3 cenários.</small>
                   </>

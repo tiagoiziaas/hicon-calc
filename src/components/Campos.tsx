@@ -35,6 +35,12 @@ export function CampoMoeda({ id, rotulo, valor, onChange }: CampoBase & {
   );
 }
 
+/** "3,359851936714" -> "3,36" (so para exibir). */
+const arredondarTaxa = (valor: string): string => {
+  const n = Number(valor.replace(",", "."));
+  return Number.isFinite(n) ? n.toFixed(2).replace(".", ",") : valor;
+};
+
 /** Taxa em % a.m. com ate 4 casas decimais (ex.: 1,85). */
 export function CampoTaxa({ id, rotulo, valor, onChange, desabilitado }: CampoBase & {
   valor: string;
@@ -51,7 +57,8 @@ export function CampoTaxa({ id, rotulo, valor, onChange, desabilitado }: CampoBa
           inputMode="decimal"
           placeholder="0,00"
           disabled={desabilitado}
-          value={valor}
+          // Campo automatico guarda a taxa exata; na tela aparece com 2 casas.
+          value={desabilitado && valor ? arredondarTaxa(valor) : valor}
           onChange={(e) => {
             let v = e.target.value.replace(/\./g, ",").replace(/[^\d,]/g, "");
             const [inteiro, ...resto] = v.split(",");

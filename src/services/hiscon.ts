@@ -7,7 +7,15 @@ import type { ConfigHiscon, DadosCenario } from "../types/cenarios";
 import { mesesCompletos, rate } from "./financeiro";
 
 export type CalculoHiscon =
-  | { ok: true; meses: number; taxa: number; /** taxa em % como no campo do sistema (ex.: "3,3599") */ taxaTexto: string }
+  | {
+      ok: true;
+      meses: number;
+      taxa: number;
+      /** taxa em % com precisao total, gravada no campo (vai para os calculos): "3,359851936714" */
+      taxaTexto: string;
+      /** taxa em % arredondada para mostrar na tela: "3,36" */
+      taxaExibicao: string;
+    }
   | { ok: false; motivo: string };
 
 export function calcularHiscon(comum: DadosCenario, config: ConfigHiscon): CalculoHiscon {
@@ -27,5 +35,12 @@ export function calcularHiscon(comum: DadosCenario, config: ConfigHiscon): Calcu
     return { ok: false, motivo: `Em ${meses} meses as parcelas não pagam nem o valor contratado (taxa daria 0% ou negativa).` };
   }
   const taxa = rate(meses, parcela, valor);
-  return { ok: true, meses, taxa, taxaTexto: (taxa * 100).toFixed(4).replace(".", ",") };
+  // Mostra 2 casas, mas calcula com o valor exato do RATE (igual ao Excel).
+  return {
+    ok: true,
+    meses,
+    taxa,
+    taxaTexto: (taxa * 100).toFixed(12).replace(".", ","),
+    taxaExibicao: (taxa * 100).toFixed(2).replace(".", ","),
+  };
 }
