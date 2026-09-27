@@ -93,7 +93,15 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                 role="radio"
                 aria-checked={hiscon === op.valor}
                 className={hiscon === op.valor ? "ativo" : undefined}
-                onClick={() => atualizarHiscon("ativo", op.valor)}
+                onClick={() => {
+                  atualizarHiscon("ativo", op.valor);
+                  // Voltando para "Nao" a taxa passa a ser digitada: sai a precisao total do Hiscon
+                  // e fica com 2 casas, como seria digitada a mao.
+                  const taxa = Number(comum.taxaJuros.replace(",", "."));
+                  if (!op.valor && comum.taxaJuros.length > 7 && Number.isFinite(taxa)) {
+                    atualizarTodos("taxaJuros", taxa.toFixed(2).replace(".", ","));
+                  }
+                }}
               >
                 {op.texto}
               </button>
