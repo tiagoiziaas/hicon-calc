@@ -7,7 +7,9 @@ import {
   type Calculo,
   type ResultadoCenario,
 } from "../services/calculoCenarios";
+import { salvarCalculo, type ResumoSalvo } from "../services/calculosSalvos";
 import { MODELOS, type IdModelo } from "../services/modelosMinuta";
+import { supabaseConfigurado } from "../services/supabase";
 import { CENARIOS, type Cenarios, type IdCenario, type Identificacao } from "../types/cenarios";
 import { formatarDataBr, formatarPct } from "../utils/formatos";
 import { CampoData, CampoTexto } from "./Campos";
@@ -16,6 +18,13 @@ interface Props {
   cenarios: Cenarios;
   identificacao: Identificacao;
   onIdentificacao: <K extends keyof Identificacao>(campo: K, valor: Identificacao[K]) => void;
+  /** Registro do banco aberto no formulario (salvar atualiza ele). */
+  idSalvo: string | null;
+  /** Ha mudancas no formulario desde a ultima vez que foi salvo/aberto. */
+  alterado: boolean;
+  /** Minuta selecionada no calculo que acabou de ser aberto do banco. */
+  modeloAberto: IdModelo | null;
+  onSalvo: (registro: ResumoSalvo) => void;
 }
 
 type EstadoBacen =
@@ -90,9 +99,16 @@ function ResultadoParcial({ id, r }: { id: IdCenario; r: ResultadoCenario }) {
   );
 }
 
-export function GerarMinuta({ cenarios, identificacao, onIdentificacao }: Props) {
+export function GerarMinuta({ cenarios, identificacao, onIdentificacao, idSalvo, alterado, modeloAberto, onSalvo }: Props) {
   const dataHiscon = cenarios.hiscon.data;
   const [modelo, setModelo] = useState<IdModelo>(lerModelo);
+  const [salvando, setSalvando] = useState(false);
+  const [statusSalvo, setStatusSalvo] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+
+  // Ao abrir um calculo salvo, volta para a minuta que estava selecionada nele.
+  useEffect(() => {
+    if (modeloAberto) setModelo(modeloAberto);
+  }, [modeloAberto]);
   const [bacen, setBacen] = useState<EstadoBacen>({ tipo: "sem-data" });
   const [gerando, setGerando] = useState(false);
   const [erroGerar, setErroGerar] = useState("");
@@ -178,6 +194,40 @@ export function GerarMinuta({ cenarios, identificacao, onIdentificacao }: Props)
       setErroGerar(`Não foi possível gerar a planilha: ${(e as Error).message}`);
     } finally {
       setGerando(false);
+    }
+  };
+
+  const podeSalvar = Boolean(identificacao.nomeCliente.trim() || identificacao.numeroContrato.trim());
+
+  // Mensagem de status some quando o formulario muda.
+  useEffect(() => {
+    if (alterado) setStatusSalvo(null);
+  }, [alterado, cenarios, identificacao]);
+
+  const salvar = async () => {
+    setSalvando(true);
+    setStatusSalvo(null);
+    try {
+      const registro = await salvarCalculo(
+        {
+          identificacao,
+          cenarios,
+          modelo,
+          calculos,
+          bacen: bacen.tipo === "ok" ? bacen.top : null,
+          taxaMedia: bacen.tipo === "ok" ? bacen.taxa : null,
+        },
+        idSalvo,
+      );
+      onSalvo(registro);
+      setStatusSalvo({
+        tipo: "ok",
+        texto: `Salvo no banco em ${new Date(registro.atualizadoEm).toLocaleString("pt-BR")}.`,
+      });
+    } catch (e) {
+      setStatusSalvo({ tipo: "erro", texto: `Não foi possível salvar: ${(e as Error).message}` });
+    } finally {
+      setSalvando(false);
     }
   };
 
@@ -276,8 +326,32 @@ export function GerarMinuta({ cenarios, identificacao, onIdentificacao }: Props)
         <button className="btn-primario" type="button" disabled={!tudoPronto || gerando} onClick={baixar}>
           {gerando ? "Gerando…" : `Baixar ${def.nome} preenchida (.xlsx)`}
         </button>
+        {supabaseConfigurado && (
+          <button
+            className="btn-salvar"
+            type="button"
+            disabled={salvando || !podeSalvar}
+            onClick={salvar}
+            title={podeSalvar ? undefined : "Preencha o nome do cliente ou o número do contrato para salvar"}
+          >
+            {salvando ? "Salvando…" : idSalvo ? "Salvar alterações no banco" : "Salvar no banco"}
+          </button>
+        )}
         {!tudoPronto && <small className="muted">Complete os 3 cenários para liberar o download.</small>}
       </div>
+      {supabaseConfigurado && (
+        <div className="minuta-salvo">
+          {statusSalvo ? (
+            <span className={statusSalvo.tipo === "erro" ? "texto-erro" : "texto-ok"}>{statusSalvo.texto}</span>
+          ) : idSalvo ? (
+            <span className={alterado ? "texto-aviso" : "texto-ok"}>
+              {alterado ? "Há alterações ainda não salvas neste cálculo." : "Cálculo salvo no banco, sem alterações pendentes."}
+            </span>
+          ) : (
+            <span className="muted">Este cálculo ainda não foi salvo.</span>
+          )}
+        </div>
+      )}
     </section>
   );
 }

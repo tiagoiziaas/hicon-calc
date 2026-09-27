@@ -12,6 +12,7 @@
     "limpar:modelos": "tsx scripts/limpar-modelos.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "jszip": "^3.10.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

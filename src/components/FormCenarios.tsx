@@ -1,4 +1,4 @@
-import { useCenarios } from "../hooks/useCenarios";
+import type { CalculoAtual } from "../hooks/useCalculoAtual";
 import { CENARIOS, camposPreenchidos, totalCampos, type DadosCenario, type IdCenario } from "../types/cenarios";
 import { CampoData, CampoInteiro, CampoMoeda, CampoTaxa, CampoTexto } from "./Campos";
 import { GerarMinuta } from "./GerarMinuta";
@@ -15,13 +15,28 @@ const CAMPOS_COMUNS = [
 ] as const satisfies readonly (keyof DadosCenario)[];
 
 interface Props {
+  /** Calculo do formulario (fica no App, compartilhado com a aba "Calculos salvos"). */
+  atual: CalculoAtual;
   /** Leva a data do cenario para a consulta do BACEN. */
   onConsultarBacen: (data: string) => void;
 }
 
-export function FormCenarios({ onConsultarBacen }: Props) {
-  const { cenarios, identificacao, atualizar, atualizarTodos, atualizarIdentificacao, copiar, limpar, limparTodos } =
-    useCenarios();
+export function FormCenarios({ atual, onConsultarBacen }: Props) {
+  const {
+    cenarios,
+    identificacao,
+    idSalvo,
+    atualizar,
+    atualizarTodos,
+    atualizarIdentificacao,
+    copiar,
+    limpar,
+    novo,
+    alterado,
+    modeloAberto,
+    marcarSalvo,
+  } = atual;
+
   // O bloco comum mostra os valores do contrato bancario (os 3 recebem o que for digitado nele).
   const comum = cenarios.contrato;
   const divergentes = (id: IdCenario) => CAMPOS_COMUNS.filter((k) => cenarios[id][k] !== comum[k]);
@@ -33,7 +48,7 @@ export function FormCenarios({ onConsultarBacen }: Props) {
           Preencha os dados comuns uma vez só: eles vão automaticamente para os 3 cenários. Tudo fica salvo neste
           navegador enquanto você digita.
         </p>
-        <button className="btn-secundario" type="button" onClick={limparTodos}>
+        <button className="btn-secundario" type="button" onClick={novo}>
           Limpar tudo
         </button>
       </div>
@@ -215,6 +230,10 @@ export function FormCenarios({ onConsultarBacen }: Props) {
         cenarios={cenarios}
         identificacao={identificacao}
         onIdentificacao={atualizarIdentificacao}
+        idSalvo={idSalvo}
+        alterado={alterado}
+        modeloAberto={modeloAberto}
+        onSalvo={marcarSalvo}
       />
     </section>
   );

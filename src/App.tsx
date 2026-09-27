@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CalculosSalvos } from "./components/CalculosSalvos";
 import { Cabecalho } from "./components/Cabecalho";
 import { Filtros } from "./components/Filtros";
 import { FormCenarios } from "./components/FormCenarios";
 import { Ranking } from "./components/Ranking";
 import { Resumo } from "./components/Resumo";
+import { useCalculoAtual } from "./hooks/useCalculoAtual";
 import { useTema } from "./hooks/useTema";
 import {
   MODALIDADES_PESSOA_FISICA_PADRAO,
@@ -16,11 +18,13 @@ import {
 import { hojeIso } from "./utils/datas";
 import { formatarDataBr } from "./utils/formatos";
 
-type Aba = "cenarios" | "bacen";
+type Aba = "cenarios" | "salvos" | "bacen";
 
 export default function App() {
   const { tema, alternar } = useTema();
   const [aba, setAba] = useState<Aba>("cenarios");
+  // Calculo do formulario: compartilhado entre "Dados dos cenarios" e "Calculos salvos".
+  const atual = useCalculoAtual();
 
   const [data, setData] = useState(hojeIso);
   const [segmento, setSegmento] = useState<Segmento>("PESSOA FÍSICA");
@@ -147,6 +151,15 @@ export default function App() {
           <button
             type="button"
             role="tab"
+            aria-selected={aba === "salvos"}
+            className={aba === "salvos" ? "ativa" : undefined}
+            onClick={() => setAba("salvos")}
+          >
+            Cálculos salvos
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={aba === "bacen"}
             className={aba === "bacen" ? "ativa" : undefined}
             onClick={() => setAba("bacen")}
@@ -166,7 +179,28 @@ export default function App() {
                 cada cenário para comparar e calcular.
               </p>
             </section>
-            <FormCenarios onConsultarBacen={consultarBacenNaData} />
+            <FormCenarios atual={atual} onConsultarBacen={consultarBacenNaData} />
+          </>
+        ) : aba === "salvos" ? (
+          <>
+            <section className="hero">
+              <h1>
+                Cálculos <span className="grad">salvos</span>
+              </h1>
+              <p>Todos os cálculos gravados no banco de dados. Abra um para continuar editando ou gerar a planilha de novo.</p>
+            </section>
+            <CalculosSalvos
+              idAberto={atual.idSalvo}
+              versao={atual.versaoLista}
+              onAbrir={(calc) => {
+                atual.abrir(calc);
+                setAba("cenarios");
+              }}
+              onNovo={() => {
+                atual.novo();
+                setAba("cenarios");
+              }}
+            />
           </>
         ) : (
           <>
