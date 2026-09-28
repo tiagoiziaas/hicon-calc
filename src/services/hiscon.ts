@@ -2,6 +2,7 @@
 // como na planilha "forma DAta" do escritorio:
 //   meses = DATEDIF(inclusao; mes atual; "Y") * 12 + DATEDIF(inclusao; mes atual; "YM")
 //   taxa  = RATE(meses; -parcela; valor financiado)
+// Vale so para o Contrato bancario (os outros cenarios continuam digitados).
 
 import type { ConfigHiscon, DadosCenario } from "../types/cenarios";
 import { mesesCompletos, rate } from "./financeiro";

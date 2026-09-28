@@ -43,10 +43,16 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
 
   // O bloco comum mostra os valores do contrato bancario (os 3 recebem o que for digitado nele).
   const comum = cenarios.contrato;
-  const divergentes = (id: IdCenario) => CAMPOS_COMUNS.filter((k) => cenarios[id][k] !== comum[k]);
-
-  // Contrato do Hiscon: taxa de juros e numero de meses calculados sozinhos (planilha "forma DAta").
   const hiscon = configHiscon.ativo;
+  // Com Hiscon, o total de parcelas do Contrato bancario e automatico (numero de meses);
+  // nesse campo o bloco comum passa a valer so para Extraidos do BACEN e IN 28.
+  const comumTotalParcelas = hiscon ? cenarios.hiscon.totalParcelas : comum.totalParcelas;
+  const valorComum = <K extends (typeof CAMPOS_COMUNS)[number]>(k: K): DadosCenario[K] =>
+    (k === "totalParcelas" ? comumTotalParcelas : comum[k]) as DadosCenario[K];
+  const divergentes = (id: IdCenario) => CAMPOS_COMUNS.filter((k) => cenarios[id][k] !== valorComum(k));
+
+  // Contrato do Hiscon: taxa de juros e numero de meses calculados sozinhos (planilha "forma DAta"),
+  // SO no Contrato bancario. Extraidos do BACEN e IN 28 continuam como antes (digitados).
   const calcHiscon = useMemo(
     () => (hiscon ? calcularHiscon(comum, configHiscon) : null),
     [hiscon, comum, configHiscon],
@@ -58,14 +64,13 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
     }
   }, [cenarios.in28.taxaJuros, cenarios.in28.taxaTetoIn28, atualizar]);
 
-  // Grava o resultado nos 3 cenarios sempre que a data, os valores ou o mes atual mudam.
+  // Grava o resultado no Contrato bancario sempre que a data, os valores ou o mes atual mudam.
   useEffect(() => {
     if (!calcHiscon?.ok) return;
     const { meses, taxaTexto } = calcHiscon;
-    const ids: IdCenario[] = ["contrato", "hiscon", "in28"];
-    if (ids.some((id) => cenarios[id].totalParcelas !== meses)) atualizarTodos("totalParcelas", meses);
-    if (ids.some((id) => cenarios[id].taxaJuros !== taxaTexto)) atualizarTodos("taxaJuros", taxaTexto);
-  }, [calcHiscon, cenarios, atualizarTodos]);
+    if (cenarios.contrato.totalParcelas !== meses) atualizar("contrato", "totalParcelas", meses);
+    if (cenarios.contrato.taxaJuros !== taxaTexto) atualizar("contrato", "taxaJuros", taxaTexto);
+  }, [calcHiscon, cenarios.contrato.totalParcelas, cenarios.contrato.taxaJuros, atualizar]);
 
   return (
     <section className="cenarios">
@@ -106,7 +111,7 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                   // e fica com 2 casas, como seria digitada a mao.
                   const taxa = Number(comum.taxaJuros.replace(",", "."));
                   if (!op.valor && comum.taxaJuros.length > 7 && Number.isFinite(taxa)) {
-                    atualizarTodos("taxaJuros", taxa.toFixed(2).replace(".", ","));
+                    atualizar("contrato", "taxaJuros", taxa.toFixed(2).replace(".", ","));
                   }
                 }}
               >
@@ -133,7 +138,7 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                     <span>
                       Taxa de juros praticada: <strong>{calcHiscon.taxaExibicao}% a.m.</strong>
                     </span>
-                    <small className="muted">Preenchidos automaticamente nos 3 cenários.</small>
+                    <small className="muted">Preenchidos automaticamente no Contrato bancário.</small>
                   </>
                 ) : (
                   <span>{calcHiscon?.motivo}</span>
@@ -170,11 +175,18 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
           />
           <CampoInteiro
             id="comum-parcelas"
-            rotulo={hiscon ? "Total de parcelas (nº de meses · automático)" : "Total de parcelas"}
+            rotulo={hiscon ? "Total de parcelas (BACEN e IN 28)" : "Total de parcelas"}
             sufixo="parcelas"
-            valor={comum.totalParcelas}
-            desabilitado={hiscon}
-            onChange={(v) => atualizarTodos("totalParcelas", v)}
+            valor={comumTotalParcelas}
+            onChange={(v) => {
+              if (hiscon) {
+                // O Contrato bancario usa o numero de meses do Hiscon.
+                atualizar("hiscon", "totalParcelas", v);
+                atualizar("in28", "totalParcelas", v);
+              } else {
+                atualizarTodos("totalParcelas", v);
+              }
+            }}
           />
           <CampoData
             id="comum-primeira"
@@ -210,7 +222,7 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                   <button
                     className="btn-link"
                     type="button"
-                    onClick={() => diferentes.forEach((k) => atualizar(def.id, k, comum[k]))}
+                    onClick={() => diferentes.forEach((k) => atualizar(def.id, k, valorComum(k)))}
                   >
                     Usar dados comuns
                   </button>
@@ -254,17 +266,17 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
                 />
                 <CampoTaxa
                   id={campo("taxa")}
-                  rotulo={hiscon ? "Taxa de juros (automática · Hiscon)" : "Taxa de juros contratada"}
+                  rotulo={hiscon && def.id === "contrato" ? "Taxa de juros (automática · Hiscon)" : "Taxa de juros contratada"}
                   valor={c.taxaJuros}
-                  desabilitado={hiscon}
+                  desabilitado={hiscon && def.id === "contrato"}
                   onChange={(v) => atualizar(def.id, "taxaJuros", v)}
                 />
                 <CampoInteiro
                   id={campo("parcelas")}
-                  rotulo={hiscon ? "Total de parcelas (automático · Hiscon)" : "Total de parcelas"}
+                  rotulo={hiscon && def.id === "contrato" ? "Total de parcelas (automático · Hiscon)" : "Total de parcelas"}
                   sufixo="parcelas"
                   valor={c.totalParcelas}
-                  desabilitado={hiscon}
+                  desabilitado={hiscon && def.id === "contrato"}
                   onChange={(v) => atualizar(def.id, "totalParcelas", v)}
                 />
                 <CampoData
