@@ -8,6 +8,7 @@ import {
   type ResultadoCenario,
 } from "../services/calculoCenarios";
 import { salvarCalculo, type ResumoSalvo } from "../services/calculosSalvos";
+import { calcularHiscon } from "../services/hiscon";
 import { MODELOS, type IdModelo } from "../services/modelosMinuta";
 import { supabaseConfigurado } from "../services/supabase";
 import { CENARIOS, type Cenarios, type ConfigHiscon, type IdCenario, type Identificacao } from "../types/cenarios";
@@ -151,12 +152,26 @@ export function GerarMinuta({ cenarios, configHiscon, identificacao, onIdentific
   }, [dataHiscon]);
 
   const taxaMedia = bacen.tipo === "ok" ? bacen.taxa : null;
+
+  // Quando o contrato e do Hiscon, o emprestimo tem um fim real conhecido (numero de
+  // meses automatico do Contrato bancario). Nenhum cenario pode contar indebito depois
+  // desse fim real, mesmo que o "Total de parcelas" digitado em BACEN/IN 28 seja maior
+  // (por exemplo, o prazo originalmente contratado).
+  const limiteCronograma = useMemo(() => {
+    if (!configHiscon.ativo) return null;
+    const r = calcularHiscon(cenarios.contrato, configHiscon);
+    return r.ok ? r.meses : null;
+  }, [configHiscon, cenarios.contrato]);
+
   const calculos = useMemo(
     () =>
       Object.fromEntries(
-        ORDEM.map((id) => [id, calcularCenario(id, cenarios[id], identificacao.dataReferencia, taxaMedia)]),
+        ORDEM.map((id) => [
+          id,
+          calcularCenario(id, cenarios[id], identificacao.dataReferencia, taxaMedia, limiteCronograma),
+        ]),
       ) as Record<IdCenario, Calculo>,
-    [cenarios, identificacao.dataReferencia, taxaMedia],
+    [cenarios, identificacao.dataReferencia, taxaMedia, limiteCronograma],
   );
 
   const tudoPronto = ORDEM.every((id) => calculos[id].ok) && bacen.tipo === "ok";
