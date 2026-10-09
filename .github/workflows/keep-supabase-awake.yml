@@ -1,0 +1,35 @@
+name: Manter o Supabase ativo
+
+# O Supabase pausa automaticamente projetos no plano gratuito depois de ~7 dias
+# sem nenhuma chamada a API. Esta tarefa faz uma leitura minima (so o id de 1
+# registro) a cada 3 dias para o projeto nunca ficar "inativo" aos olhos dele.
+#
+# Isso NAO e uma garantia (o Supabase pode mudar essa regra a qualquer momento);
+# se o sistema de calculos salvos depender de disponibilidade total, o plano
+# Pro do Supabase remove essa pausa de vez.
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *" # todo 3º dia, meio-dia UTC
+  workflow_dispatch: {} # permite rodar manualmente em Actions > Run workflow
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar o banco (mantem o projeto ativo)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          status=$(curl -s -o /tmp/resposta.json -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/calculos?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY")
+          echo "Status HTTP: $status"
+          cat /tmp/resposta.json
+          echo ""
+          if [ "$status" -ge 400 ]; then
+            echo "::error::Supabase respondeu com erro ($status). O projeto pode estar pausado ou a tabela nao existe."
+            exit 1
+          fi
