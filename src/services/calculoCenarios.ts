@@ -59,15 +59,6 @@ export function calcularCenario(
   c: DadosCenario,
   dataReferencia: string,
   taxaMediaBacen: number | null,
-  /**
-   * Quando o contrato e do Hiscon, o numero real de meses que o emprestimo durou
-   * (calculado por calcularHiscon). O cronograma de quitacao (e, por tabela, o
-   * indebito) nunca passa desse limite: parcelas depois do fim real do emprestimo
-   * nunca existiram, entao nao podem ser contadas como "cobradas indevidamente".
-   * O "Total de parcelas" digitado continua sendo usado em taxaPraticada,
-   * parcelaNaTaxaReferencia e quitacaoNaParcela, sem alteracao.
-   */
-  limiteCronograma?: number | null,
 ): Calculo {
   const taxaContratada = taxaDecimal(c.taxaJuros);
   const teto = taxaDecimal(c.taxaTetoIn28);
@@ -96,8 +87,7 @@ export function calcularCenario(
     return { ok: false, faltando: [], erro: (e as Error).message };
   }
 
-  const tamanhoCronograma = limiteCronograma != null ? Math.min(n, limiteCronograma) : n;
-  const cronograma: ParcelaCronograma[] = Array.from({ length: tamanhoCronograma }, (_, i) => ({
+  const cronograma: ParcelaCronograma[] = Array.from({ length: n }, (_, i) => ({
     numero: i + 1,
     data: somarMeses(c.dataPrimeiraParcela, i),
     valor: parcela,

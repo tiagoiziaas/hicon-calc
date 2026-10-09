@@ -244,15 +244,8 @@ function preencherQuitacao(aba: Aba, r: ResultadoCenario, numeroContrato: string
     linha++;
     if (p.numero === r.quitacaoNaParcela) inserirRotulo(`QUITOU NA PARCELA ${r.quitacaoNaParcela}ª`);
   }
-  // O cronograma pode ser mais curto que o "Total de parcelas" (contrato do Hiscon,
-  // encerrado antes do fim do prazo contratado) -- por isso o teste e contra o tamanho
-  // real do cronograma, nao contra r.totalParcelas.
-  if (r.quitacaoNaParcela > r.cronograma.length) {
-    const texto =
-      r.quitacaoNaParcela > r.totalParcelas
-        ? `QUITAÇÃO SÓ NA PARCELA ${r.quitacaoNaParcela}ª - SEM PARCELAS A MAIS`
-        : `CONTRATO ENCERRADO (HISCON) NA PARCELA ${r.cronograma.length}ª, ANTES DA QUITAÇÃO PELA TAXA (SÓ NA ${r.quitacaoNaParcela}ª)`;
-    inserirRotulo(texto);
+  if (r.quitacaoNaParcela > r.totalParcelas) {
+    inserirRotulo(`QUITAÇÃO SÓ NA PARCELA ${r.quitacaoNaParcela}ª - SEM PARCELAS A MAIS`);
   }
 
   const linhaTotal = aba.inserirLinha(total, linha++);
