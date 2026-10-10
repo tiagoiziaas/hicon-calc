@@ -65,12 +65,17 @@ export function FormCenarios({ atual, onConsultarBacen }: Props) {
   }, [cenarios.in28.taxaJuros, cenarios.in28.taxaTetoIn28, atualizar]);
 
   // Grava o resultado no Contrato bancario sempre que a data, os valores ou o mes atual mudam.
+  // A taxa usa os meses reais do Hiscon (e so ela); o total de parcelas do Contrato bancario
+  // acompanha o mesmo campo digitado em "Total de parcelas (BACEN e IN 28)", para os 3
+  // cenarios ficarem com a mesma quantidade de parcelas.
   useEffect(() => {
     if (!calcHiscon?.ok) return;
-    const { meses, taxaTexto } = calcHiscon;
-    if (cenarios.contrato.totalParcelas !== meses) atualizar("contrato", "totalParcelas", meses);
+    const { taxaTexto } = calcHiscon;
+    if (cenarios.contrato.totalParcelas !== comumTotalParcelas) {
+      atualizar("contrato", "totalParcelas", comumTotalParcelas);
+    }
     if (cenarios.contrato.taxaJuros !== taxaTexto) atualizar("contrato", "taxaJuros", taxaTexto);
-  }, [calcHiscon, cenarios.contrato.totalParcelas, cenarios.contrato.taxaJuros, atualizar]);
+  }, [calcHiscon, comumTotalParcelas, cenarios.contrato.totalParcelas, cenarios.contrato.taxaJuros, atualizar]);
 
   return (
     <section className="cenarios">
